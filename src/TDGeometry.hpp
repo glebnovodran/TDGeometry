@@ -18,8 +18,8 @@ protected:
 	std::vector<sPoint> mPnts;
 	std::vector<sPoly> mPols;
 
-	bool loadPnts(const std::string& pntsPath);
-	bool loadPols(const std::string& polsPath);
+	bool load_pnts(const std::string& pntsPath);
+	bool load_pols(const std::string& polsPath);
 public:
 	cTDGeometry();
 
@@ -47,7 +47,7 @@ public:
 
 	bool load(const std::string& folder);
 	bool load(const std::string& pntsPath, const std::string& polsPath);
-	bool dumpGEO(std::ostream& os);
+	bool dumpGEO(std::ostream& os) const;
 
 	friend std::ostream& operator << (std::ostream& os, cTDGeometry& geo) {
 		geo.dumpGEO(os);

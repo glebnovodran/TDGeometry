@@ -141,9 +141,9 @@ bool cTDGeometry::load(const std::string& folder) {
 
 bool cTDGeometry::load(const std::string& pntsPath, const std::string& polsPath) {
 	using namespace std;
-	bool res = loadPnts(pntsPath);
+	bool res = load_pnts(pntsPath);
 	if (res) {
-		res = loadPols(polsPath);
+		res = load_pols(polsPath);
 		if (!res) {
 			cout << "Can't load polygons from " << polsPath << endl;
 		}
@@ -153,7 +153,7 @@ bool cTDGeometry::load(const std::string& pntsPath, const std::string& polsPath)
 	return res;
 }
 
-bool cTDGeometry::dumpGEO(std::ostream& os) {
+bool cTDGeometry::dumpGEO(std::ostream& os) const {
 	using namespace std;
 
 	if (!os.good()) { return false; }
