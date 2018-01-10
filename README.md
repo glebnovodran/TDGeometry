@@ -1,2 +1,2 @@
 # TDGeometry
-Loading and converting geometry in TouchDesigner tabulated file format
+Loading and converting TouchDesigner geometry files.
