@@ -153,7 +153,7 @@ bool cTDGeometry::load(const std::string& pntsPath, const std::string& polsPath)
 	return res;
 }
 
-bool cTDGeometry::dumpGEO(std::ostream& os) const {
+bool cTDGeometry::dump_geo(std::ostream& os) const {
 	using namespace std;
 
 	if (!os.good()) { return false; }

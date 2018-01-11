@@ -47,10 +47,10 @@ public:
 
 	bool load(const std::string& folder);
 	bool load(const std::string& pntsPath, const std::string& polsPath);
-	bool dumpGEO(std::ostream& os) const;
+	bool dump_geo(std::ostream& os) const;
 
 	friend std::ostream& operator << (std::ostream& os, cTDGeometry& geo) {
-		geo.dumpGEO(os);
+		geo.dump_geo(os);
 		return os;
 	}
 };
