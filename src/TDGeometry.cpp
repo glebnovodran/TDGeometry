@@ -1,5 +1,7 @@
 #include "TDGeometry.hpp"
+#include <iostream>
 #include <sstream>
+#include <fstream>
 
 static const char* PTS_FNAME = "pnt.txt";
 static const char* POLY_FNAME = "pol.txt";
