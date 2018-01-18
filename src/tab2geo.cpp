@@ -12,7 +12,7 @@ void showHelp() {
 }
 
 int main(int argc, char* argv[]) {
-	cTDGeometry tdgeo;
+	TDGeometry tdgeo;
 	if (argc == 2) {
 		string inFolder = argv[1];
 		if (tdgeo.load(inFolder)) {

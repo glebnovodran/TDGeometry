@@ -1,2 +1,4 @@
 # TDGeometry
-Loading and converting TouchDesigner geometry files.
+
+TouchDesigner geometry tools.
+Data loading and conversion to SideFX Houdini hclassic format

@@ -6,30 +6,30 @@
 static const char* PTS_FNAME = "pnt.txt";
 static const char* POLY_FNAME = "pol.txt";
 
-cTDGeometry::cTDGeometry() {
+TDGeometry::TDGeometry() {
 	mPnts.clear();
 	mPols.clear();
 }
 
-bool cTDGeometry::load_pnts(const std::string& pntsPath) {
+bool TDGeometry::load_pnts(const std::string& pntsPath) {
 	using namespace std;
 
-	static struct sPointMap {
+	static struct PointMap {
 		const char* pName;
-		float sPoint::* pField;
+		float Point::* pField;
 	} map[] = {
-		{ "P(0)", &sPoint::x },
-		{ "P(1)", &sPoint::y },
-		{ "P(2)", &sPoint::z },
-		{ "N(0)", &sPoint::nx },
-		{ "N(1)", &sPoint::ny },
-		{ "N(2)", &sPoint::nz },
-		{ "Cd(0)", &sPoint::r },
-		{ "Cd(1)", &sPoint::g },
-		{ "Cd(2)", &sPoint::b },
-		{ "Cd(3)", &sPoint::a },
-		{ "uv(0)", &sPoint::u },
-		{ "uv(1)", &sPoint::v },
+		{ "P(0)", &Point::x },
+		{ "P(1)", &Point::y },
+		{ "P(2)", &Point::z },
+		{ "N(0)", &Point::nx },
+		{ "N(1)", &Point::ny },
+		{ "N(2)", &Point::nz },
+		{ "Cd(0)", &Point::r },
+		{ "Cd(1)", &Point::g },
+		{ "Cd(2)", &Point::b },
+		{ "Cd(3)", &Point::a },
+		{ "uv(0)", &Point::u },
+		{ "uv(1)", &Point::v },
 		{ nullptr, nullptr }
 	};
 
@@ -60,7 +60,7 @@ bool cTDGeometry::load_pnts(const std::string& pntsPath) {
 		} else {
 			int columnIdx = 0;
 			float val;
-			sPoint pnt = {};
+			Point pnt = {};
 			while (ss >> val) {
 				int imap = columnMap[columnIdx];
 				if (imap >= 0) {
@@ -76,7 +76,7 @@ bool cTDGeometry::load_pnts(const std::string& pntsPath) {
 	return res;
 }
 
-bool cTDGeometry::load_pols(const std::string& polsPath) {
+bool TDGeometry::load_pols(const std::string& polsPath) {
 	using namespace std;
 	const string verticesColName = "vertices";
 	bool res = true;
@@ -108,7 +108,7 @@ bool cTDGeometry::load_pols(const std::string& polsPath) {
 			string column;
 			uint32_t val;
 			int i = 0;
-			sPoly poly = {};
+			Poly poly = {};
 			for (int i = 0; i <= vertsIdx; getline(ss, column, '\t'), ++i);
 
 			istringstream cs(column);
@@ -128,7 +128,7 @@ bool cTDGeometry::load_pols(const std::string& polsPath) {
 	return true;
 }
 
-bool cTDGeometry::load(const std::string& folder) {
+bool TDGeometry::load(const std::string& folder) {
 	using namespace std;
 	string pntsPath = folder + "/"+ PTS_FNAME;
 	string polyPath = folder + "/" + POLY_FNAME;
@@ -136,7 +136,7 @@ bool cTDGeometry::load(const std::string& folder) {
 	return load(pntsPath, polyPath);
 }
 
-bool cTDGeometry::load(const std::string& pntsPath, const std::string& polsPath) {
+bool TDGeometry::load(const std::string& pntsPath, const std::string& polsPath) {
 	using namespace std;
 	bool res = load_pnts(pntsPath);
 	if (res) {
@@ -150,7 +150,7 @@ bool cTDGeometry::load(const std::string& pntsPath, const std::string& polsPath)
 	return res;
 }
 
-bool cTDGeometry::dump_geo(std::ostream& os) const {
+bool TDGeometry::dump_geo(std::ostream& os) const {
 	using namespace std;
 
 	if (!os.good()) { return false; }
