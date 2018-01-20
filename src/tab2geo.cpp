@@ -1,3 +1,8 @@
+/*
+ * TouchDesigner geometry: conversion to Houdini geo/hclassic format
+ * Author: Gleb Novodran <novodran@gmail.com>
+ */
+
 #include "TDGeometry.hpp"
 #include <iostream>
 #include <fstream>

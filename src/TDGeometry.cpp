@@ -1,3 +1,7 @@
+/*
+ * TouchDesigner geometry: data loading and conversion
+ * Author: Gleb Novodran <novodran@gmail.com>
+ */
 #include "TDGeometry.hpp"
 #include <iostream>
 #include <sstream>

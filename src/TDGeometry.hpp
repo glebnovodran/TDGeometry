@@ -1,3 +1,8 @@
+/*
+ * TouchDesigner geometry: data loading and conversion
+ * Author: Gleb Novodran <novodran@gmail.com>
+ */
+
 #include <ostream>
 #include <vector>
 
