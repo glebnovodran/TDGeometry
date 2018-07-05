@@ -55,6 +55,7 @@ public:
 
 	bool load(const std::string& folder);
 	bool load(const std::string& pntsPath, const std::string& polsPath);
+	void unload();
 	bool dump_geo(std::ostream& os) const;
 
 	friend std::ostream& operator << (std::ostream& os, TDGeometry& geo) {

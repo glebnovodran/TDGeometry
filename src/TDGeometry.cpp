@@ -154,6 +154,14 @@ bool TDGeometry::load(const std::string& pntsPath, const std::string& polsPath) 
 	return res;
 }
 
+void TDGeometry::unload() {
+	mPols.clear();
+	std::vector<Poly>().swap(mPols);
+
+	mPnts.clear();
+	std::vector<Point>().swap(mPnts);
+}
+
 bool TDGeometry::dump_geo(std::ostream& os) const {
 	using namespace std;
 
