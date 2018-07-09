@@ -77,6 +77,18 @@ bool TDGeometry::load_pnts(const std::string& pntsPath) {
 		++nrow;
 	}
 
+	mBbox.max[0] = mBbox.min[0] = mPnts[0].x;
+	mBbox.max[1] = mBbox.min[1] = mPnts[0].y;
+	mBbox.max[2] = mBbox.min[2] = mPnts[0].z;
+	for (auto& pt : mPnts) {
+		mBbox.min[0] = std::fminf(mBbox.min[0], pt.x);
+		mBbox.min[1] = std::fminf(mBbox.min[1], pt.y);
+		mBbox.min[2] = std::fminf(mBbox.min[2], pt.z);
+
+		mBbox.max[0] = std::fmaxf(mBbox.max[0], pt.x);
+		mBbox.max[1] = std::fmaxf(mBbox.max[1], pt.y);
+		mBbox.max[2] = std::fmaxf(mBbox.max[2], pt.z);
+	}
 	return res;
 }
 
