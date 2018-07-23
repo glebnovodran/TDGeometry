@@ -1,5 +1,9 @@
 /Debug/*
 /Release/*
+/bin/*
+/tmp/*
+/build/*
+/lib/*
 /x64/*
 /.vs/*
 /hou/*
@@ -7,4 +11,17 @@
 /data/*
 *.filters
 *.user
+*.bak
+*.bak.*
 todo.txt
+*.log
+*.tlog
+*.obj
+*.lastbuildstate
+*.pdb
+*.idb
+**/CMakeFiles/*
+CMakeCache.txt
+*.cmake
+**/Makefile
+.vscode
