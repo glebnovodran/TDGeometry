@@ -1,7 +1,7 @@
 #include <glm.hpp>
 #define GLM_FORCE_RADIANS
 #include <gtc/matrix_transform.hpp>
-#include "TDGeometry.hpp"
+#include <TDGeometry.hpp>
 
 struct GLDrawSys {
 #ifdef _WIN32

@@ -71,26 +71,26 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\tmp\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\tmp\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\tmp\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\tmp\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)_x64\</OutDir>
-    <IntDir>$(SolutionDir)\tmp\$(Configuration)_x64\</IntDir>
+    <IntDir>$(SolutionDir)\tmp\$(ProjectName)\$(Configuration)_x64\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)_x64\</OutDir>
-    <IntDir>$(SolutionDir)\tmp\$(Configuration)_x64\</IntDir>
+    <IntDir>$(SolutionDir)\tmp\$(ProjectName)\$(Configuration)_x64\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm;..\..\src</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
@@ -103,7 +103,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm;..\..\src</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
@@ -118,7 +118,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm;..\..\src</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -136,7 +136,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\include;D:\dev\Imagination\PowerVR_Graphics\PowerVR_SDK\SDK_2018_R1\external\glm;..\..\src</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -148,13 +148,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\TDGeometry.cpp" />
     <ClCompile Include="src\GLDraw.cpp" />
-    <ClCompile Include="src\TDGeometry.cpp" />
     <ClCompile Include="src\TDGeoViewer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\TDGeometry.hpp" />
     <ClInclude Include="src\GLDraw.hpp" />
-    <ClInclude Include="src\TDGeometry.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
