@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <cmath>
 
 static const char* PTS_FNAME = "pnt.txt";
 static const char* POLY_FNAME = "pol.txt";
