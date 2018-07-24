@@ -3,6 +3,7 @@
 #define DYNAMICEGL_NO_NAMESPACE
 #include <DynamicGles.h>
 #include <fstream>
+#include <cstdarg>
 
 #include "GLDraw.hpp"
 
@@ -13,7 +14,7 @@ static void sys_dbg_msg(const char* pFmt, ...) {
 #ifdef _MSC_VER
 	vsprintf_s(buf, sizeof(buf), pFmt, lst);
 #else
-	vsprintf(pBuf, pFmt, lst);
+	vsprintf(buf, pFmt, lst);
 #endif
 	va_end(lst);
 #ifdef _WIN32
@@ -160,8 +161,10 @@ void GLESApp::init_egl() {
 	flg = eglChooseConfig(mEGL.display, cfgAttrs, &mEGL.config, 1, &ncfg);
 	if (flg) flg = ncfg == 1;
 	if (!flg) return;
-
+#ifdef _WIN32
 	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, mhWnd, nullptr);
+#else
+#endif
 	if (!valid_surface()) return;
 
 	static EGLint ctxAttrs[] = {
