@@ -26,6 +26,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
 	return 0;
 }
-#else
+#elif defined(UNIX)
+int main(int argc, char **argv){
+	GLDrawCfg cfg;
+	cfg.sys._p_ = nullptr;
+	cfg.width = 1024;
+	cfg.height = 768;
 
+	GLDraw::init(cfg);
+	GLDraw::loop(main_loop);
+	GLDraw::reset();
+
+	return 0;
+}
 #endif

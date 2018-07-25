@@ -266,5 +266,11 @@ void GLDraw::loop(void(*pLoop)()) {
 		}
 	}
 }
-
+#elif defined(UNIX)
+void GLESApp::init_wnd() {
+}
+void GLESApp::reset_wnd() {
+}
+void GLDraw::loop(void(*pLoop)()) {
+}
 #endif
