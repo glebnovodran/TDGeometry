@@ -4,6 +4,9 @@
 #	define _WIN32_WINNT 0x0500
 #	include <tchar.h>
 #	include <windows.h>
+#elif defined(X11)
+	#include "X11/Xlib.h"
+	#include "X11/Xutil.h"
 #endif
 
 #include "GLDraw.hpp"

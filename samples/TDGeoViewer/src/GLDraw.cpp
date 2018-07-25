@@ -1,9 +1,21 @@
 #define _WIN32_WINNT 0x0500
+
+#if defined(X11)
+	#include <unistd.h>
+	#include "X11/Xlib.h"
+	#include "X11/Xutil.h"
+#endif
+
 #define DYNAMICGLES_NO_NAMESPACE
 #define DYNAMICEGL_NO_NAMESPACE
-#include <DynamicGles.h>
+
 #include <fstream>
+#include <iostream>
 #include <cstdarg>
+#include <memory>
+
+#include <DynamicGles.h>
+
 
 #include "GLDraw.hpp"
 
@@ -19,6 +31,8 @@ static void sys_dbg_msg(const char* pFmt, ...) {
 	va_end(lst);
 #ifdef _WIN32
 	::OutputDebugStringA(buf);
+#elif defined(UNIX)
+	std::cout << buf << std::endl;
 #endif
 }
 
@@ -26,9 +40,13 @@ static struct GLESApp {
 #ifdef _WIN32
 	HINSTANCE mhInstance;
 	ATOM mClassAtom;
-	HWND mhWnd;
-	HDC mhDC;
+	HWND mNativeWindow;
+#elif defined(X11)
+	Display* mpNativeDisplay;
+	Window mNativeWindow;
+
 #endif
+	EGLNativeDisplayType mNativeDisplayHandle; // Win : HDC; X11 : Display
 
 	struct EGL {
 		EGLDisplay display;
@@ -138,14 +156,27 @@ void GLESApp::reset() {
 }
 
 void GLESApp::init_egl() {
-	if (!valid_display()) return;
+	using namespace std;
+	sys_dbg_msg("init_egl()");
+	if (mNativeDisplayHandle) {
+		mEGL.display = eglGetDisplay(mNativeDisplayHandle);
+	}
+	
+	if (!valid_display()) {
+		sys_dbg_msg("Failed to get and EGLDisplay");
+		return;
+	}
+
 	int verMaj = 0;
 	int verMin = 0;
 	bool flg = eglInitialize(mEGL.display, &verMaj, &verMin);
 	if (!flg) return;
 	sys_dbg_msg("EGL %d.%d\n", verMaj, verMin);
 	flg = eglBindAPI(EGL_OPENGL_ES_API);
-	if (flg != EGL_TRUE) return;
+	if (flg != EGL_TRUE) {
+		sys_dbg_msg("eglBindAPI failed");
+		return;
+	}
 
 	static EGLint cfgAttrs[] = {
 		EGL_RED_SIZE, 8,
@@ -160,20 +191,35 @@ void GLESApp::init_egl() {
 	EGLint ncfg = 0;
 	flg = eglChooseConfig(mEGL.display, cfgAttrs, &mEGL.config, 1, &ncfg);
 	if (flg) flg = ncfg == 1;
-	if (!flg) return;
+	if (!flg) {
+		sys_dbg_msg("eglChooseConfig failed");
+		return;
+	}
 #ifdef _WIN32
-	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, mhWnd, nullptr);
-#else
+	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, mNativeWindow, nullptr);
+#elif defined(X11)
+	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, (EGLNativeWindowType)mNativeWindow, nullptr);
 #endif
-	if (!valid_surface()) return;
+	if (!valid_surface()) {
+		sys_dbg_msg("eglCreateWindowSurface failed");
+		return;
+	}
 
 	static EGLint ctxAttrs[] = {
 		EGL_CONTEXT_CLIENT_VERSION, 2,
 		EGL_NONE
 	};
+
 	mEGL.context = eglCreateContext(mEGL.display, mEGL.config, nullptr, ctxAttrs);
-	if (!valid_context()) return;
-	eglMakeCurrent(mEGL.display, mEGL.surface, mEGL.surface, mEGL.context);
+	if (!valid_context()) {
+		sys_dbg_msg("eglCreateContext failed");
+		return;
+	}
+	if (!eglMakeCurrent(mEGL.display, mEGL.surface, mEGL.surface, mEGL.context)) {
+		sys_dbg_msg("eglMakeCurrent failed");
+	}
+
+	sys_dbg_msg("finished");
 }
 
 void GLESApp::reset_egl() {
@@ -232,14 +278,11 @@ void GLESApp::init_wnd() {
 	TCHAR title[128];
 	::ZeroMemory(title, sizeof(title));
 	::_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), _T("drwEGL"), _T(__DATE__));
-	mhWnd = ::CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
-	if (mhWnd) {
-		::ShowWindow(mhWnd, SW_SHOW);
-		::UpdateWindow(mhWnd);
-		mhDC = ::GetDC(mhWnd);
-		if (mhDC) {
-			mEGL.display = eglGetDisplay(mhDC);
-		}
+	mNativeWindow = ::CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
+	if (mNativeWindow) {
+		::ShowWindow(mNativeWindow, SW_SHOW);
+		::UpdateWindow(mNativeWindow);
+		mNativeDisplayHandle = ::GetDC(mNativeWindow);
 	}
 }
 
@@ -266,11 +309,67 @@ void GLDraw::loop(void(*pLoop)()) {
 		}
 	}
 }
-#elif defined(UNIX)
+#elif defined(X11)
+static const char* s_applicationName = "TDGeoViewer";
+
 void GLESApp::init_wnd() {
+	using namespace std;
+
+	sys_dbg_msg("GLESApp::init_wnd()");
+	mpNativeDisplay = XOpenDisplay(0);
+	if (mpNativeDisplay == 0) {
+		sys_dbg_msg("ERROR: can't open X display");
+		return;
+	}
+	
+	int defaultScreen = XDefaultScreen(mpNativeDisplay);
+	int defaultDepth = DefaultDepth(mpNativeDisplay, defaultScreen);
+
+	XVisualInfo* pVisualInfo = new XVisualInfo();
+	XMatchVisualInfo(mpNativeDisplay, defaultScreen, defaultDepth, TrueColor, pVisualInfo);
+
+	if (pVisualInfo == nullptr) {
+		sys_dbg_msg("ERROR: can't aquire visual info");
+		return;
+	}
+
+	Window rootWindow = RootWindow(mpNativeDisplay, defaultScreen);
+	Colormap colorMap = XCreateColormap(mpNativeDisplay, rootWindow, pVisualInfo->visual, AllocNone);
+
+	XSetWindowAttributes windowAttributes;
+	windowAttributes.colormap = colorMap;
+	windowAttributes.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask;
+	
+	mNativeWindow = XCreateWindow(mpNativeDisplay,              // The display used to create the window
+	                              rootWindow,                   // The parent (root) window - the desktop
+	                              0,                            // The horizontal (x) origin of the window
+	                              0,                            // The vertical (y) origin of the window
+								  mView.mWidth,                 // The width of the window
+	                              mView.mHeight,                // The height of the window
+	                              0,                            // Border size - set it to zero
+	                              pVisualInfo->depth,           // Depth from the visual info
+	                              InputOutput,                  // Window type - this specifies InputOutput.
+	                              pVisualInfo->visual,          // Visual to use
+	                              CWEventMask | CWColormap,     // Mask specifying these have been defined in the window attributes
+	                              &windowAttributes);           // Pointer to the window attribute structure
+
+	XMapWindow(mpNativeDisplay, mNativeWindow);
+	XStoreName(mpNativeDisplay, mNativeWindow, s_applicationName);
+
+	Atom windowManagerDelete = XInternAtom(mpNativeDisplay, "WM_DELETE_WINDOW", True);
+	XSetWMProtocols(mpNativeDisplay, mNativeWindow, &windowManagerDelete , 1);
+
+	mNativeDisplayHandle = (EGLNativeDisplayType)mpNativeDisplay;
+	sys_dbg_msg("finished");
 }
+
 void GLESApp::reset_wnd() {
 }
+
 void GLDraw::loop(void(*pLoop)()) {
+	if (pLoop) {
+		pLoop();
+	}
+	sleep(10);
 }
 #endif

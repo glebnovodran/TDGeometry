@@ -8,6 +8,7 @@ set(POWERVR_SDK_ROOT "/opt/Imagination/PowerVR_Graphics/PowerVR_SDK/SDK_2018_R1"
 set(GCC_RELEASE_COMPILE_FLAGS "-std=c++11 -g -O3 -mavx2 -mfpmath=sse -ffast-math -ftree-vectorize -mfma")
 set(GCC_RELEASE_LINK_FLAGS    "")
 
+set(GCC_DEBUG_COMPILE_FLAGS "-std=c++11 -g -ggdb -mavx2 -mfpmath=sse -ffast-math -ftree-vectorize -mfma")
 if (UNIX)
 	add_definitions(-DUNIX)
 	set(EXTRA_LIBS ${CMAKE_DL_LIBS})
@@ -15,7 +16,7 @@ if (UNIX)
 	if(NOT WS) #We support building for several Windowing Systems. Typical desktop systems support X11 and XCB, Wayland is catching on. NullWS is used by some development platforms/ testchip.
 		message ("WS Variable not set. If you wish to build for X11, Wayland or another supported windowing system, please pass -DWS=X11 or -DWS=Wayland etc. to CMake")
 	endif()
-	if (${WS} STREQUAL X11) #The following lines add the specified windowing system libraries
+	if (${WS} STREQUAL X11)
 		find_package(X11 REQUIRED)
 		list (APPEND EXTRA_LIBS ${X11_LIBRARIES})
 		include_directories(${X11_INCLUDE_DIR})
@@ -26,7 +27,8 @@ if (UNIX)
 endif()
 
 
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_RELEASE_COMPILE_FLAGS}" )
+#set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_RELEASE_COMPILE_FLAGS}" )
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_DEBUG_COMPILE_FLAGS}" )
 set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_RELEASE_LINK_FLAGS}" )
 
 set(TDGEO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
