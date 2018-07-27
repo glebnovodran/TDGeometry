@@ -1,5 +1,9 @@
 #define _WIN32_WINNT 0x0500
 
+#if defined(UNIX)
+	#include <glib.h>
+#endif
+
 #if defined(X11)
 	#include <unistd.h>
 	#include "X11/Xlib.h"
@@ -41,10 +45,12 @@ static struct GLESApp {
 	HINSTANCE mhInstance;
 	ATOM mClassAtom;
 	HWND mNativeWindow;
-#elif defined(X11)
-	Display* mpNativeDisplay;
-	Window mNativeWindow;
-
+#elif defined(UNIX)
+	GMainLoop* mpLoop;
+	#if defined(X11)
+		Display* mpNativeDisplay;
+		Window mNativeWindow;
+	#endif
 #endif
 	EGLNativeDisplayType mNativeDisplayHandle; // Win : HDC; X11 : Display
 
@@ -75,6 +81,12 @@ static struct GLESApp {
 		float mFOVY;
 		float mNear;
 		float mFar;
+
+		void set(const glm::vec3& pos, const glm::vec3& tgt, const glm::vec3& up) {
+			mPos = pos;
+			mTgt = tgt;
+			mUp = up;
+		}		
 	} mView;
 
 	glm::vec3 mClearColor;
@@ -138,6 +150,9 @@ namespace GLDraw {
 void GLESApp::init(const GLDrawCfg& cfg) {
 #ifdef _WIN32
 	mhInstance = (HINSTANCE)cfg.sys.hInstance;
+#elif defined(UNIX)
+//	mpLoop = g_main_loop_new(NULL, FALSE);
+//	g_main_loop_run(mpLoop);
 #endif
 	mView.mWidth = cfg.width;
 	mView.mHeight = cfg.height;
@@ -338,13 +353,13 @@ void GLESApp::init_wnd() {
 
 	XSetWindowAttributes windowAttributes;
 	windowAttributes.colormap = colorMap;
-	windowAttributes.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask;
+	windowAttributes.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask | KeyPressMask;
 	
 	mNativeWindow = XCreateWindow(mpNativeDisplay,              // The display used to create the window
 	                              rootWindow,                   // The parent (root) window - the desktop
 	                              0,                            // The horizontal (x) origin of the window
 	                              0,                            // The vertical (y) origin of the window
-								  mView.mWidth,                 // The width of the window
+	                              mView.mWidth,                 // The width of the window
 	                              mView.mHeight,                // The height of the window
 	                              0,                            // Border size - set it to zero
 	                              pVisualInfo->depth,           // Depth from the visual info
@@ -360,16 +375,33 @@ void GLESApp::init_wnd() {
 	XSetWMProtocols(mpNativeDisplay, mNativeWindow, &windowManagerDelete , 1);
 
 	mNativeDisplayHandle = (EGLNativeDisplayType)mpNativeDisplay;
+
+	// TODO: wait for MapNotify
 	sys_dbg_msg("finished");
 }
 
 void GLESApp::reset_wnd() {
+	XDestroyWindow(mpNativeDisplay, mNativeWindow);
+	XCloseDisplay(mpNativeDisplay);
 }
 
 void GLDraw::loop(void(*pLoop)()) {
-	if (pLoop) {
-		pLoop();
+	XEvent event;
+	bool done = false;
+	while (!done) {
+		KeySym key;
+		while (XPending(s_app.mpNativeDisplay)) {
+			XNextEvent(s_app.mpNativeDisplay, &event);
+			switch (event.type) {
+				case KeyPress:
+					done = true;
+			}
+		}
+
+		if (pLoop) {
+			pLoop();
+		}
+
 	}
-	sleep(10);
 }
 #endif
