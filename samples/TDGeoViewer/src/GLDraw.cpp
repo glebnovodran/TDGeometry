@@ -1,9 +1,5 @@
 #define _WIN32_WINNT 0x0500
 
-#if defined(UNIX)
-	#include <glib.h>
-#endif
-
 #if defined(X11)
 	#include <unistd.h>
 	#include "X11/Xlib.h"
@@ -19,7 +15,6 @@
 #include <memory>
 
 #include <DynamicGles.h>
-
 
 #include "GLDraw.hpp"
 
@@ -46,7 +41,6 @@ static struct GLESApp {
 	ATOM mClassAtom;
 	HWND mNativeWindow;
 #elif defined(UNIX)
-	GMainLoop* mpLoop;
 	#if defined(X11)
 		Display* mpNativeDisplay;
 		Window mNativeWindow;
@@ -150,9 +144,6 @@ namespace GLDraw {
 void GLESApp::init(const GLDrawCfg& cfg) {
 #ifdef _WIN32
 	mhInstance = (HINSTANCE)cfg.sys.hInstance;
-#elif defined(UNIX)
-//	mpLoop = g_main_loop_new(NULL, FALSE);
-//	g_main_loop_run(mpLoop);
 #endif
 	mView.mWidth = cfg.width;
 	mView.mHeight = cfg.height;
@@ -210,11 +201,8 @@ void GLESApp::init_egl() {
 		sys_dbg_msg("eglChooseConfig failed");
 		return;
 	}
-#ifdef _WIN32
-	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, mNativeWindow, nullptr);
-#elif defined(X11)
+
 	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, (EGLNativeWindowType)mNativeWindow, nullptr);
-#endif
 	if (!valid_surface()) {
 		sys_dbg_msg("eglCreateWindowSurface failed");
 		return;
@@ -327,6 +315,14 @@ void GLDraw::loop(void(*pLoop)()) {
 #elif defined(X11)
 static const char* s_applicationName = "TDGeoViewer";
 
+static int wait_for_MapNotify(Display* pDisp, XEvent* pEvt, char* pArg) 
+{ 
+    if ((pEvt->type == MapNotify) && (pEvt->xmap.window == (Window)pArg)) { 
+    	return 1; 
+    } 
+    return 0; 
+} 
+
 void GLESApp::init_wnd() {
 	using namespace std;
 
@@ -376,7 +372,8 @@ void GLESApp::init_wnd() {
 
 	mNativeDisplayHandle = (EGLNativeDisplayType)mpNativeDisplay;
 
-	// TODO: wait for MapNotify
+	XEvent event;
+	XIfEvent(mpNativeDisplay, &event, wait_for_MapNotify, (char*)mNativeWindow);
 	sys_dbg_msg("finished");
 }
 
