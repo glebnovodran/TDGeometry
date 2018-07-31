@@ -17,6 +17,7 @@
 #include <DynamicGles.h>
 
 #include "GLDraw.hpp"
+#include <gtx/euler_angles.hpp>
 
 static void sys_dbg_msg(const char* pFmt, ...) {
 	char buf[1024];
@@ -33,6 +34,22 @@ static void sys_dbg_msg(const char* pFmt, ...) {
 #elif defined(UNIX)
 	std::cout << buf << std::endl;
 #endif
+}
+
+bool gl_error() {
+#ifdef _DEBUG
+	GLenum lastError = glGetError();
+	if (lastError != GL_NO_ERROR) {
+		sys_dbg_msg("GLES failed with (%x).\n", lastError);
+		return true;
+	}
+#endif
+	return false;
+}
+
+std::string load_text(const std::string& path) {
+	std::ifstream is(path);
+	return std::string((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
 }
 
 static struct GLESApp {
@@ -61,6 +78,20 @@ static struct GLESApp {
 		}
 	} mEGL;
 
+	struct GPU {
+		GLuint shaderIdVtx;
+		GLuint shaderIdPix;
+		GLuint programId;
+		GLint attrLocPos;
+		GLint attrLocNrm;
+		GLint attrLocClr;
+		GLint prmLocWMtx;
+		GLint prmLocViewProj;
+		GLint prmLocHemiSky;
+		GLint prmLocHemiGround;
+		GLint prmLocHemiUp;
+		GLint prmLocInvGamma;
+	} mGPU;
 
 	struct VIEW {
 		glm::mat4x4 mViewMtx;
@@ -80,8 +111,32 @@ static struct GLESApp {
 			mPos = pos;
 			mTgt = tgt;
 			mUp = up;
-		}		
+		}
+
+		void setRange(float znear, float zfar) {
+			mNear = znear;
+			mFar = zfar;
+		}
+
+		void setFOVY(float fovy) {
+			mFOVY = fovy;
+		}
+
+		void update() {
+			mViewMtx = glm::lookAt(mPos, mTgt, mUp);
+			mProjMtx = glm::perspective(mFOVY, mAspect, mNear, mFar);
+			mViewProjMtx = mProjMtx * mViewMtx;
+		}
+
 	} mView;
+
+	struct LIGHT {
+		glm::vec3 sky;
+		glm::vec3 ground;
+		glm::vec3 up;
+	} mLight;
+
+	glm::vec3 mGamma;
 
 	glm::vec3 mClearColor;
 
@@ -153,6 +208,17 @@ void GLESApp::init(const GLDrawCfg& cfg) {
 	init_gpu();
 
 	mClearColor = glm::vec3(0.33f, 0.44f, 0.55f);
+
+	mView.set(glm::vec3(0.0f, 1.75f, 1.5f), glm::vec3(0.0f, 1.5f, 0.0f), glm::vec3(0, 1, 0));
+	mView.setFOVY(glm::radians(40.0f));
+	mView.setRange(0.1f, 1000.0f);
+	mView.update();
+
+	mLight.sky = glm::vec3(2.14318f, 1.971372f, 1.862601f);
+	mLight.ground = glm::vec3(0.15f, 0.1f, 0.075f);
+	mLight.up = glm::vec3(0, 1, 0);
+
+	mGamma = glm::vec3(2.2f);
 }
 
 void GLESApp::reset() {
@@ -235,9 +301,87 @@ void GLESApp::reset_egl() {
 }
 
 void GLESApp::init_gpu() {
+	GLint status;
+	GLint infoLen = 0;
+
+	if (!valid_egl()) { return; }
+
+	std::string vtxSrc = load_text("../../data/shader/vtx.vert");
+	if (vtxSrc.length() < 1) { return; }
+	const char* pVtxSrc = vtxSrc.c_str();
+	mGPU.shaderIdVtx = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(mGPU.shaderIdVtx, 1, &pVtxSrc, nullptr);
+	glCompileShader(mGPU.shaderIdVtx);
+	glGetShaderiv(mGPU.shaderIdVtx, GL_COMPILE_STATUS, &status);
+	pVtxSrc = nullptr;
+
+	if (!status) {
+		sys_dbg_msg("GPU: vertex shader compilation failed.\n");
+		glGetShaderiv(mGPU.shaderIdVtx, GL_INFO_LOG_LENGTH, &infoLen);
+		char* pInfo = new char[infoLen];
+		if (pInfo) {
+			glGetShaderInfoLog(mGPU.shaderIdVtx, infoLen, &infoLen, pInfo);
+			sys_dbg_msg(pInfo);
+			delete[] pInfo;
+		}
+		return;
+	}
+
+	std::string pixSrc = load_text("../../data/shader/hemi.frag");
+	if (pixSrc.length() < 1) return;
+	const char* pPixSrc = pixSrc.c_str();
+	mGPU.shaderIdPix = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(mGPU.shaderIdPix, 1, &pPixSrc, nullptr);
+	glCompileShader(mGPU.shaderIdPix);
+	glGetShaderiv(mGPU.shaderIdPix, GL_COMPILE_STATUS, &status);
+	pPixSrc = nullptr;
+
+	if (!status) {
+		sys_dbg_msg("GPU: pixel shader compilation failed.\n");
+		glGetShaderiv(mGPU.shaderIdPix, GL_INFO_LOG_LENGTH, &infoLen);
+		char* pInfo = new char[infoLen];
+		if (pInfo) {
+			glGetShaderInfoLog(mGPU.shaderIdPix, infoLen, &infoLen, pInfo);
+			sys_dbg_msg(pInfo);
+			delete[] pInfo;
+		}
+		return;
+	}
+
+	sys_dbg_msg("GPU: shaders ok.\n");
+	mGPU.programId = glCreateProgram();
+	glAttachShader(mGPU.programId, mGPU.shaderIdVtx);
+	glAttachShader(mGPU.programId, mGPU.shaderIdPix);
+	glLinkProgram(mGPU.programId);
+	glGetProgramiv(mGPU.programId, GL_LINK_STATUS, &status);
+	if (!status) {
+		sys_dbg_msg("GPU: program link failed.\n");
+		glGetProgramiv(mGPU.programId, GL_INFO_LOG_LENGTH, &infoLen);
+		char* pInfo = new char[infoLen];
+		if (pInfo) {
+			glGetShaderInfoLog(mGPU.shaderIdPix, infoLen, &infoLen, pInfo);
+			sys_dbg_msg(pInfo);
+			delete[] pInfo;
+		}
+		return;
+	}
+	sys_dbg_msg("GPU: program ok.\n");
+
+	mGPU.attrLocPos = glGetAttribLocation(mGPU.programId, "vtxPos");
+	mGPU.attrLocNrm = glGetAttribLocation(mGPU.programId, "vtxNrm");
+	mGPU.attrLocClr = glGetAttribLocation(mGPU.programId, "vtxClr");
+	mGPU.prmLocWMtx = glGetUniformLocation(mGPU.programId, "prmWMtx");
+	mGPU.prmLocViewProj = glGetUniformLocation(mGPU.programId, "prmViewProj");
+	mGPU.prmLocHemiSky = glGetUniformLocation(mGPU.programId, "prmHemiSky");
+	mGPU.prmLocHemiGround = glGetUniformLocation(mGPU.programId, "prmHemiGround");
+	mGPU.prmLocHemiUp = glGetUniformLocation(mGPU.programId, "prmHemiUp");
+	mGPU.prmLocInvGamma = glGetUniformLocation(mGPU.programId, "prmInvGamma");
 }
 
 void GLESApp::reset_gpu() {
+	glDeleteShader(mGPU.shaderIdPix);
+	glDeleteShader(mGPU.shaderIdVtx);
+	glDeleteProgram(mGPU.programId);
 }
 
 #ifdef _WIN32
@@ -402,3 +546,152 @@ void GLDraw::loop(void(*pLoop)()) {
 	}
 }
 #endif
+
+namespace GLDraw {
+
+	int Mesh::idx_bytes() const { return is_idx16() ? sizeof(GLushort) : sizeof(GLuint); }
+
+	// geo should contain a triangulated geometry
+	Mesh* Mesh::create(const TDGeometry& geo) {
+		uint32_t vtxNum = geo.get_pnt_num();
+		uint32_t triNum = geo.get_poly_num();
+		if ((vtxNum == 0) || (triNum == 0)) { return nullptr; }
+		Mesh* pMsh = new Mesh();
+		pMsh->mNumVtx = vtxNum;
+		pMsh->mNumTri = triNum;
+
+		glGenBuffers(2, &pMsh->mBuffIdVtx);
+
+		if (0 != pMsh->mBuffIdVtx) {
+			Mesh::Vtx * pVtx = new Vtx[vtxNum];
+			for (uint32_t i = 0; i < vtxNum; i++) {
+				TDGeometry::Point pnt = geo.get_pnt(i);
+				pVtx[i].pos = glm::vec3(pnt.x, pnt.y, pnt.z);
+				pVtx[i].nrm = glm::vec3(pnt.nx, pnt.ny, pnt.nz);
+				pVtx[i].clr = glm::vec3(pnt.r, pnt.g, pnt.b);
+			}
+			glBindBuffer(GL_ARRAY_BUFFER, pMsh->mBuffIdVtx);
+			glBufferData(GL_ARRAY_BUFFER, vtxNum * sizeof(Vtx), pVtx, GL_STATIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			delete[] pVtx;
+		} else { gl_error(); }
+
+		if (0 != pMsh->mBuffIdIdx) {
+			size_t sizeIB = triNum * 3 * pMsh->idx_bytes();
+			char* pIdx = new char[sizeIB];
+			if (pMsh->is_idx16()) {
+				uint16_t* pIB16 = (uint16_t*)pIdx;
+				for (uint32_t i = 0; i < triNum; i++) {
+					TDGeometry::Poly pol = geo.get_poly(i);
+					for (uint32_t j = 0; j < 3; j++) {
+						*pIB16++ = (uint16_t)pol.ipnt[j];
+					}
+				}
+			} else {
+				uint32_t* pIB32 = (uint32_t*)pIdx;
+				for (uint32_t i = 0; i < triNum; i++) {
+					TDGeometry::Poly pol = geo.get_poly(i);
+					for (uint32_t j = 0; j < 3; j++) {
+						*pIB32++ = (uint32_t)pol.ipnt[j];
+					}
+				}
+			}
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMsh->mBuffIdIdx);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIB, pIdx, GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			delete[] pIdx;
+		} else { gl_error(); }
+
+		return pMsh;
+	}
+
+	void Mesh::destroy() {
+		if (0 != mBuffIdIdx) {
+			glDeleteBuffers(1, &mBuffIdIdx);
+			mBuffIdIdx = 0;
+		}
+		if (0 != mBuffIdVtx) {
+			glDeleteBuffers(1, &mBuffIdVtx);
+			mBuffIdVtx = 0;
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
+
+	void Mesh::draw(const glm::mat4x4& worldMtx) {
+		if (!s_app.valid_egl()) { return; }
+		if (0 == mBuffIdVtx) { return; }
+		if (0 == mBuffIdIdx) { return; }
+
+		glUseProgram(s_app.mGPU.programId);
+
+		glUniform3f(s_app.mGPU.prmLocInvGamma, 1.0f / s_app.mGamma.r, 1.0f / s_app.mGamma.g, 1.0f / s_app.mGamma.b);
+		glUniform3fv(s_app.mGPU.prmLocHemiSky, 1, (float*)&s_app.mLight.sky);
+		glUniform3fv(s_app.mGPU.prmLocHemiGround, 1, (float*)&s_app.mLight.ground);
+		glUniform3fv(s_app.mGPU.prmLocHemiUp, 1, (float*)&s_app.mLight.up);
+
+		glm::mat4x4 tm = glm::transpose(s_app.mView.mViewProjMtx);
+		glUniformMatrix4fv(s_app.mGPU.prmLocViewProj, 1, GL_FALSE, (float*)&tm);
+		tm = glm::transpose(worldMtx);
+		glUniform4fv(s_app.mGPU.prmLocWMtx, 3, (float*)&tm);
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+#if 0
+		glEnable(GL_CULL_FACE);
+		glFrontFace(GL_CCW); // TD
+		glCullFace(GL_BACK);
+#endif
+
+		const GLsizei vstride = (GLsizei)sizeof(Mesh::Vtx);
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffIdVtx);
+		glEnableVertexAttribArray(s_app.mGPU.attrLocPos);
+		glVertexAttribPointer(s_app.mGPU.attrLocPos, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, pos));
+		glEnableVertexAttribArray(s_app.mGPU.attrLocNrm);
+		glVertexAttribPointer(s_app.mGPU.attrLocNrm, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, nrm));
+		glEnableVertexAttribArray(s_app.mGPU.attrLocClr);
+		glVertexAttribPointer(s_app.mGPU.attrLocClr, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, clr));
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffIdIdx);
+		glDrawElements(GL_TRIANGLES, mNumTri * 3, is_idx16() ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
+
+		glDisableVertexAttribArray(s_app.mGPU.attrLocPos);
+		glDisableVertexAttribArray(s_app.mGPU.attrLocNrm);
+		glDisableVertexAttribArray(s_app.mGPU.attrLocClr);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	}
+
+
+	glm::mat4x4 degX(float deg) { return glm::rotate(glm::mat4x4(1.0f), glm::radians(deg), glm::vec3(1, 0, 0)); }
+	glm::mat4x4 degY(float deg) { return glm::rotate(glm::mat4x4(1.0f), glm::radians(deg), glm::vec3(0, 1, 0)); }
+	glm::mat4x4 degZ(float deg) { return glm::rotate(glm::mat4x4(1.0f), glm::radians(deg), glm::vec3(0, 0, 1)); }
+	glm::mat4x4 scl(const glm::vec3& s) { return glm::scale(glm::mat4x4(1.0f), s); }
+
+	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
+		float dx = rotateDegrees.x;
+		float dy = rotateDegrees.y;
+		float dz = rotateDegrees.z;
+		glm::mat4x4 rm = degZ(dz) * degY(dy) * degX(dx);
+		glm::mat4x4 sm = scl(scale);
+		glm::mat4x4 mtx = rm * sm;
+		mtx[3] = glm::vec4(translate, 1);
+		return mtx;
+	}
+
+	glm::mat4x4 xformSRTXYZ1(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
+		glm::vec3 rotateRadians = glm::radians(rotateDegrees);
+		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleXY(rotateRadians.x, rotateRadians.y);
+		//glm::mat4x4 rm1 = degZ(dz) * degY(dy) * degX(dx);
+		glm::mat4x4 sm = scl(scale);
+		glm::mat4x4 mtx = rm * sm;
+		mtx[3] = glm::vec4(translate, 1);
+		return mtx;
+	}
+
+	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx, float sy, float sz) {
+		return xformSRTXYZ(glm::vec3(tx, ty, tz), glm::vec3(rx, ry, rz), glm::vec3(sx, sy, sz));
+	}
+}

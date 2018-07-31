@@ -11,35 +11,47 @@
 
 #include "GLDraw.hpp"
 
+static TDGeometry s_tdgeo;
+static GLDraw::Mesh* s_pMesh = nullptr;
+
+static void data_init(const std::string& folder) {
+	s_tdgeo.load(folder);
+	s_pMesh = GLDraw::Mesh::create(s_tdgeo);
+}
+
+static void data_reset() {
+	s_pMesh->destroy();
+	s_pMesh = nullptr;
+}
+
 static void main_loop() {
 	GLDraw::begin();
+	glm::mat4x4 mtx = glm::mat4x4(1.0f);
+	static float rotDY = 0.0f;
+	mtx = GLDraw::xformSRTXYZ(0.0f, 0.0f, 0.0f, 0.0f, rotDY, 0.0f);
+	rotDY += 1.0f;
+	s_pMesh->draw(mtx);
 	GLDraw::end();
 }
 
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-	GLDrawCfg cfg;
-	cfg.sys.hInstance = hInstance;
-	cfg.width = 1024;
-	cfg.height = 768;
-
-	GLDraw::init(cfg);
-	GLDraw::loop(main_loop);
-	GLDraw::reset();
-
-	return 0;
-}
 #elif defined(UNIX)
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
+#endif
 	GLDrawCfg cfg;
+#ifdef _WIN32
+	cfg.sys.hInstance = hInstance;
+#elif defined(UNIX)
 	cfg.sys._p_ = nullptr;
+#endif
 	cfg.width = 1024;
 	cfg.height = 768;
-
 	GLDraw::init(cfg);
+	data_init("../../data/geo");
 	GLDraw::loop(main_loop);
+	data_reset();
 	GLDraw::reset();
 
 	return 0;
 }
-#endif
