@@ -8,7 +8,6 @@
 /.vs/*
 /hou/*
 /TD/*
-/data/*
 *.filters
 *.user
 *.bak
