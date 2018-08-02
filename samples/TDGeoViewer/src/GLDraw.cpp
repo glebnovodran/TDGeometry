@@ -664,26 +664,11 @@ namespace GLDraw {
 
 	}
 
-
-	glm::mat4x4 degX(float deg) { return glm::rotate(glm::mat4x4(1.0f), glm::radians(deg), glm::vec3(1, 0, 0)); }
-	glm::mat4x4 degY(float deg) { return glm::rotate(glm::mat4x4(1.0f), glm::radians(deg), glm::vec3(0, 1, 0)); }
-	glm::mat4x4 degZ(float deg) { return glm::rotate(glm::mat4x4(1.0f), glm::radians(deg), glm::vec3(0, 0, 1)); }
 	glm::mat4x4 scl(const glm::vec3& s) { return glm::scale(glm::mat4x4(1.0f), s); }
 
 	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
-		float dx = rotateDegrees.x;
-		float dy = rotateDegrees.y;
-		float dz = rotateDegrees.z;
-		glm::mat4x4 rm = degZ(dz) * degY(dy) * degX(dx);
-		glm::mat4x4 sm = scl(scale);
-		glm::mat4x4 mtx = rm * sm;
-		mtx[3] = glm::vec4(translate, 1);
-		return mtx;
-	}
-
-	glm::mat4x4 xformSRTXYZ1(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
 		glm::vec3 rotateRadians = glm::radians(rotateDegrees);
-		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleXY(rotateRadians.x, rotateRadians.y);
+		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleY(rotateRadians.y) * glm::eulerAngleY(rotateRadians.x);
 		//glm::mat4x4 rm1 = degZ(dz) * degY(dy) * degX(dx);
 		glm::mat4x4 sm = scl(scale);
 		glm::mat4x4 mtx = rm * sm;
