@@ -87,9 +87,13 @@ static struct GLESApp {
 		GLint attrLocClr;
 		GLint prmLocWMtx;
 		GLint prmLocViewProj;
+		GLint prmLocViewPos;
 		GLint prmLocHemiSky;
 		GLint prmLocHemiGround;
 		GLint prmLocHemiUp;
+		GLint prmSpecDir;
+		GLint prmSpecClr;
+		GLint prmSpecRough;
 		GLint prmLocInvGamma;
 	} mGPU;
 
@@ -134,6 +138,9 @@ static struct GLESApp {
 		glm::vec3 sky;
 		glm::vec3 ground;
 		glm::vec3 up;
+		glm::vec3 specDir;
+		glm::vec3 specClr;
+		float specRoughness;
 	} mLight;
 
 	glm::vec3 mGamma;
@@ -188,6 +195,7 @@ namespace GLDraw {
 	void begin() {
 		if (!s_app.valid_egl()) { return; }
 		s_app.frame_clear();
+		s_app.mLight.specDir = glm::normalize(s_app.mView.mTgt - (s_app.mView.mPos + glm::vec3(00.0f, 1.0f, 0.0f)));
 	}
 
 	void end() {
@@ -214,7 +222,8 @@ void GLESApp::init(const GLDrawCfg& cfg) {
 	mLight.sky = glm::vec3(2.14318f, 1.971372f, 1.862601f);
 	mLight.ground = glm::vec3(0.15f, 0.1f, 0.075f);
 	mLight.up = glm::vec3(0, 1, 0);
-
+	mLight.specClr = glm::vec3(1, 1, 1);
+	mLight.specRoughness = /*1.0e-6f*/ 0.45;
 	mGamma = glm::vec3(2.2f);
 }
 
@@ -324,7 +333,7 @@ void GLESApp::init_gpu() {
 		return;
 	}
 
-	std::string pixSrc = load_text("../../data/shader/hemi.frag");
+	std::string pixSrc = load_text("../../data/shader/hemidir.frag");
 	if (pixSrc.length() < 1) return;
 	const char* pPixSrc = pixSrc.c_str();
 	mGPU.shaderIdPix = glCreateShader(GL_FRAGMENT_SHADER);
@@ -369,9 +378,13 @@ void GLESApp::init_gpu() {
 	mGPU.attrLocClr = glGetAttribLocation(mGPU.programId, "vtxClr");
 	mGPU.prmLocWMtx = glGetUniformLocation(mGPU.programId, "prmWMtx");
 	mGPU.prmLocViewProj = glGetUniformLocation(mGPU.programId, "prmViewProj");
+	mGPU.prmLocViewPos = glGetUniformLocation(mGPU.programId, "prmViewPos");
 	mGPU.prmLocHemiSky = glGetUniformLocation(mGPU.programId, "prmHemiSky");
 	mGPU.prmLocHemiGround = glGetUniformLocation(mGPU.programId, "prmHemiGround");
 	mGPU.prmLocHemiUp = glGetUniformLocation(mGPU.programId, "prmHemiUp");
+	mGPU.prmSpecDir = glGetUniformLocation(mGPU.programId, "prmSpecDir");
+	mGPU.prmSpecClr = glGetUniformLocation(mGPU.programId, "prmSpecClr");
+	mGPU.prmSpecRough = glGetUniformLocation(mGPU.programId, "prmSpecRough");
 	mGPU.prmLocInvGamma = glGetUniformLocation(mGPU.programId, "prmInvGamma");
 }
 
@@ -632,6 +645,12 @@ namespace GLDraw {
 		glUniform3fv(s_app.mGPU.prmLocHemiSky, 1, (float*)&s_app.mLight.sky);
 		glUniform3fv(s_app.mGPU.prmLocHemiGround, 1, (float*)&s_app.mLight.ground);
 		glUniform3fv(s_app.mGPU.prmLocHemiUp, 1, (float*)&s_app.mLight.up);
+
+		glUniform3fv(s_app.mGPU.prmSpecDir, 1, (float*)&s_app.mLight.specDir);
+		glUniform3fv(s_app.mGPU.prmSpecClr, 1, (float*)&s_app.mLight.specClr);
+		glUniform1f(s_app.mGPU.prmSpecRough, s_app.mLight.specRoughness);
+
+		glUniform3fv(s_app.mGPU.prmLocViewPos, 1, (float*)&s_app.mView.mPos);
 
 		glm::mat4x4 tm = glm::transpose(s_app.mView.mViewProjMtx);
 		glUniformMatrix4fv(s_app.mGPU.prmLocViewProj, 1, GL_FALSE, (float*)&tm);
