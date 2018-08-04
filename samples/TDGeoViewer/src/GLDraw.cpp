@@ -30,7 +30,7 @@ static void sys_dbg_msg(const char* pFmt, ...) {
 #endif
 	va_end(lst);
 #ifdef _WIN32
-	::OutputDebugStringA(buf);
+	OutputDebugStringA(buf);
 #elif defined(UNIX)
 	std::cout << buf << std::endl;
 #endif
@@ -197,9 +197,6 @@ namespace GLDraw {
 }
 
 void GLESApp::init(const GLDrawCfg& cfg) {
-#ifdef _WIN32
-	mhInstance = (HINSTANCE)cfg.sys.hInstance;
-#endif
 	mView.mWidth = cfg.width;
 	mView.mHeight = cfg.height;
 	mView.mAspect = (float)mView.mWidth / mView.mHeight;
@@ -391,10 +388,10 @@ static LRESULT CALLBACK drwWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 	LRESULT res = 0;
 	switch (msg) {
 	case WM_DESTROY:
-		::PostQuitMessage(0);
+		PostQuitMessage(0);
 		break;
 	default:
-		res = ::DefWindowProc(hWnd, msg, wParam, lParam);
+		res = DefWindowProc(hWnd, msg, wParam, lParam);
 		break;
 	}
 	return res;
@@ -402,16 +399,22 @@ static LRESULT CALLBACK drwWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 
 void GLESApp::init_wnd() {
 	WNDCLASSEX wc;
-	::ZeroMemory(&wc, sizeof(WNDCLASSEX));
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_VREDRAW | CS_HREDRAW;
+
+	if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)drwWndProc, &mhInstance)) {
+		sys_dbg_msg("Can't obtain instance handle");
+		return;
+	}
+
 	wc.hInstance = mhInstance;
-	wc.hCursor = ::LoadCursor(0, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)::GetStockObject(BLACK_BRUSH);
+	wc.hCursor = LoadCursor(0, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszClassName = s_drwClassName;
 	wc.lpfnWndProc = drwWndProc;
 	wc.cbWndExtra = 0x10;
-	mClassAtom = ::RegisterClassEx(&wc);
+	mClassAtom = RegisterClassEx(&wc);
 
 	RECT rect;
 	rect.left = 0;
@@ -419,32 +422,32 @@ void GLESApp::init_wnd() {
 	rect.right = mView.mWidth;
 	rect.bottom = mView.mHeight;
 	int style = WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_GROUP;
-	::AdjustWindowRect(&rect, style, FALSE);
+	AdjustWindowRect(&rect, style, FALSE);
 	int wndW = rect.right - rect.left;
 	int wndH = rect.bottom - rect.top;
 	TCHAR title[128];
-	::ZeroMemory(title, sizeof(title));
-	::_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), _T("drwEGL"), _T(__DATE__));
-	mNativeWindow = ::CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
+	ZeroMemory(title, sizeof(title));
+	_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), _T("drwEGL"), _T(__DATE__));
+	mNativeWindow = CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
 	if (mNativeWindow) {
-		::ShowWindow(mNativeWindow, SW_SHOW);
-		::UpdateWindow(mNativeWindow);
-		mNativeDisplayHandle = ::GetDC(mNativeWindow);
+		ShowWindow(mNativeWindow, SW_SHOW);
+		UpdateWindow(mNativeWindow);
+		mNativeDisplayHandle = GetDC(mNativeWindow);
 	}
 }
 
 void GLESApp::reset_wnd() {
-	::UnregisterClass(s_drwClassName, mhInstance);
+	UnregisterClass(s_drwClassName, mhInstance);
 }
 
 void GLDraw::loop(void(*pLoop)()) {
 	MSG msg;
 	bool done = false;
 	while (!done) {
-		if (::PeekMessage(&msg, 0, 0, 0, PM_NOREMOVE)) {
-			if (::GetMessage(&msg, NULL, 0, 0)) {
-				::TranslateMessage(&msg);
-				::DispatchMessage(&msg);
+		if (PeekMessage(&msg, 0, 0, 0, PM_NOREMOVE)) {
+			if (GetMessage(&msg, NULL, 0, 0)) {
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
 			} else {
 				done = true;
 				break;
@@ -460,12 +463,12 @@ void GLDraw::loop(void(*pLoop)()) {
 static const char* s_applicationName = "TDGeoViewer";
 
 static int wait_for_MapNotify(Display* pDisp, XEvent* pEvt, char* pArg) 
-{ 
-    if ((pEvt->type == MapNotify) && (pEvt->xmap.window == (Window)pArg)) { 
-    	return 1; 
-    } 
-    return 0; 
-} 
+{
+	if ((pEvt->type == MapNotify) && (pEvt->xmap.window == (Window)pArg)) { 
+		return 1;
+	}
+	return 0;
+}
 
 void GLESApp::init_wnd() {
 	using namespace std;

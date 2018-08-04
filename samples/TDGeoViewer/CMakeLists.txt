@@ -5,11 +5,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/x11)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/x11)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/x11)
 set(POWERVR_SDK_ROOT "/opt/Imagination/PowerVR_Graphics/PowerVR_SDK/SDK_2018_R1")
-#set(GCC_RELEASE_COMPILE_FLAGS "-std=c++11 -g -O3 -mavx2 -mfpmath=sse -ffast-math -ftree-vectorize -mfma -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -lglib-2.0")
-set(GCC_RELEASE_COMPILE_FLAGS "-std=c++11 -g -O3 -mavx2 -mfpmath=sse -ffast-math -ftree-vectorize -mfma")
+#set(GCC_RELEASE_COMPILE_FLAGS "-std=c++11 -g -O3 -mavx -mfpmath=sse -ffast-math -ftree-vectorize -mfma -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -lglib-2.0 -DNDEBUG")
+set(GCC_RELEASE_COMPILE_FLAGS "-std=c++11 -g -O3 -mavx -mfpmath=sse -ffast-math -ftree-vectorize -mfma")
 set(GCC_RELEASE_LINK_FLAGS    "")
 
-set(GCC_DEBUG_COMPILE_FLAGS "-std=c++11 -g -ggdb -mavx2 -mfpmath=sse -ffast-math -ftree-vectorize -mfma")
+set(GCC_DEBUG_COMPILE_FLAGS "-std=c++11 -g -ggdb -mavx -mfpmath=sse -ffast-math -ftree-vectorize -mfma")
+
 
 if (UNIX)
 	add_definitions(-DUNIX)

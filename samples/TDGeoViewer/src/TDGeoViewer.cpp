@@ -40,11 +40,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 int main(int argc, char **argv) {
 #endif
 	GLDrawCfg cfg;
-#ifdef _WIN32
-	cfg.sys.hInstance = hInstance;
-#elif defined(UNIX)
-	cfg.sys._p_ = nullptr;
-#endif
+
 	cfg.width = 1024;
 	cfg.height = 768;
 	GLDraw::init(cfg);

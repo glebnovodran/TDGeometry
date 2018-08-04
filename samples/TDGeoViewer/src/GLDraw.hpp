@@ -3,16 +3,7 @@
 #include <gtc/matrix_transform.hpp>
 #include <TDGeometry.hpp>
 
-struct GLDrawSys {
-#ifdef _WIN32
-	void* hInstance;
-#else
-	void* _p_;
-#endif
-};
-
 struct GLDrawCfg {
-	GLDrawSys sys;
 	int width;
 	int height;
 };
