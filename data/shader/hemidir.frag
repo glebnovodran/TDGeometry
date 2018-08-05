@@ -15,6 +15,8 @@ uniform vec3 prmSpecDir;
 uniform vec3 prmSpecClr;
 uniform float prmSpecRough;
 
+#define PI (3.141592653589793)
+
 struct WK_CTX {
 	vec3 P;
 	vec3 N;
@@ -44,25 +46,38 @@ vec3 diff_test(WK_CTX ctx) {
 }
 
 vec3 spec_blinn(WK_CTX ctx) {
-
-	float nh = dot(ctx.N, ctx.H);
-	nh = max(nh, 0.0);
+	float nh = max(0.0, dot(ctx.N, ctx.H));
 	float rr = prmSpecRough * prmSpecRough;
-
-	float pwr = max(0.001, 2.0/(rr*rr) - 2.0);
-	float val = pow(nh, pwr);
+	float val = pow(nh, max(0.001, 2.0/(rr*rr) - 2.0));
 
 	return val * prmSpecClr;
-//	return nh * prmSpecClr;
 }
 
 vec3 spec_phong(WK_CTX ctx) {
 	float vr = max(0.0, dot(ctx.V, reflect(-ctx.L, ctx.N)));
 	float rr = prmSpecRough * prmSpecRough;
-	float pwr = max(0.001, 2.0/rr - 2.0);
-	float val = pow(vr, pwr) / 2.0;
+	float val = pow(vr,  max(0.001, 2.0/rr - 2.0)) / 2.0;
+
 	return val * prmSpecClr;
-//	return vr * prmSpecClr;
+}
+
+vec3 spec_GGX(WK_CTX ctx) {
+	float rr = prmSpecRough * prmSpecRough;
+	float rrrr = rr * rr;
+
+	float nh = max(0.0, dot(ctx.N, ctx.H));
+	float nl = max(0.0, dot(ctx.N, ctx.L));
+	float nv = max(0.0, dot(ctx.N, ctx.V));
+
+	float dv = nh*nh * (rrrr-1.0) + 1.0;
+
+	float distr = rrrr / (dv*dv*PI);
+	float hrr = rr * 0.5;
+	float tnl = nl*(1.0-hrr) + hrr;
+	float tnv = nv*(1.0-hrr) + hrr;
+	float val = (nl*distr) / (tnl*tnv);
+
+	return val * prmSpecClr;
 }
 
 vec3 spec_none(WK_CTX ctx) {
@@ -85,6 +100,8 @@ void main() {
 
 //	vec3 specClr = spec_blinn(wk);
 	vec3 specClr = spec_phong(wk);
+//	vec3 specClr = spec_GGX(wk);
+
 	clr += specClr;
 
 	clr = pow(clr, prmInvGamma);
