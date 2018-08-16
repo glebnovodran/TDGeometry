@@ -701,4 +701,16 @@ namespace GLDraw {
 	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx, float sy, float sz) {
 		return xformSRTXYZ(glm::vec3(tx, ty, tz), glm::vec3(rx, ry, rz), glm::vec3(sx, sy, sz));
 	}
+
+	void adjust_view_for_bbox(const float min[3], const float max[3]) {
+		glm::vec3 vmin(min[0],min[1],min[2]);
+		glm::vec3 vmax(max[0], max[1], max[2]);
+		glm::vec3 tgt = (vmin + vmax) * 0.5f;
+		float shift = (vmax - vmin).z;
+		glm::vec3 pos = tgt;
+		pos.z += shift*4;
+
+		s_app.mView.set(pos, tgt, glm::vec3(0, 1, 0));
+		s_app.mView.update();
+	}
 }

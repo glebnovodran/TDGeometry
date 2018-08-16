@@ -45,6 +45,8 @@ int main(int argc, char **argv) {
 	cfg.height = 768;
 	GLDraw::init(cfg);
 	data_init("../../data/geo");
+	TDGeometry::BBox bbox = s_tdgeo.bbox();
+	GLDraw::adjust_view_for_bbox(bbox.min, bbox.max);
 	GLDraw::loop(main_loop);
 	data_reset();
 	GLDraw::reset();

@@ -158,6 +158,11 @@
     <ClInclude Include="..\..\src\TDGeometry.hpp" />
     <ClInclude Include="src\GLDraw.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\data\shader\hemi.frag" />
+    <None Include="..\..\data\shader\hemidir.frag" />
+    <None Include="..\..\data\shader\vtx.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

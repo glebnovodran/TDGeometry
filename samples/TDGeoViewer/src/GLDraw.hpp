@@ -39,7 +39,7 @@ namespace GLDraw {
 		void draw(const glm::mat4x4& worldMtx);
 	};
 
+	void adjust_view_for_bbox(const float min[3], const float max[3]);
 	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale = glm::vec3(1.0f));
-	glm::mat4x4 xformSRTXYZ1(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale);
 	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx = 1.0f, float sy = 1.0f, float sz = 1.0f);
 }
