@@ -690,8 +690,7 @@ namespace GLDraw {
 
 	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
 		glm::vec3 rotateRadians = glm::radians(rotateDegrees);
-		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleY(rotateRadians.y) * glm::eulerAngleY(rotateRadians.x);
-		//glm::mat4x4 rm1 = degZ(dz) * degY(dy) * degX(dx);
+		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleY(rotateRadians.y) * glm::eulerAngleX(rotateRadians.x);
 		glm::mat4x4 sm = scl(scale);
 		glm::mat4x4 mtx = rm * sm;
 		mtx[3] = glm::vec4(translate, 1);
