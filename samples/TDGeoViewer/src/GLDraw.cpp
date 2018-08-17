@@ -195,12 +195,174 @@ namespace GLDraw {
 	void begin() {
 		if (!s_app.valid_egl()) { return; }
 		s_app.frame_clear();
-		s_app.mLight.specDir = glm::normalize(s_app.mView.mTgt - (s_app.mView.mPos + glm::vec3(00.0f, 1.0f, 0.0f)));
 	}
 
 	void end() {
 		if (!s_app.valid_egl()) { return; }
 		eglSwapBuffers(s_app.mEGL.display, s_app.mEGL.surface);
+	}
+
+	void set_view(const glm::vec3& pos, const glm::vec3& tgt, const glm::vec3& up) {
+		s_app.mView.set(pos, tgt, up);
+		s_app.mView.update();
+	}
+
+	void set_degreesFOVY(float deg) {
+		s_app.mView.setFOVY(glm::radians(deg));
+		s_app.mView.update();
+	}
+
+	void set_view_range(float znear, float zfar) {
+		s_app.mView.setRange(znear, zfar);
+		s_app.mView.update();
+	}
+
+	void set_hemi_light(const glm::vec3& sky, const glm::vec3& ground, const glm::vec3& up) {
+		s_app.mLight.sky = sky;
+		s_app.mLight.ground = ground;
+		s_app.mLight.up = up;
+	}
+
+	void set_spec_light(const glm::vec3& dir, const glm::vec3& clr, float roughness) {
+		s_app.mLight.specDir = dir;
+		s_app.mLight.specClr = clr;
+		s_app.mLight.specRoughness = roughness;
+	}
+
+	int Mesh::idx_bytes() const { return is_idx16() ? sizeof(GLushort) : sizeof(GLuint); }
+
+	// geo should contain a triangulated geometry
+	Mesh* Mesh::create(const TDGeometry& geo) {
+		uint32_t vtxNum = geo.get_pnt_num();
+		uint32_t triNum = geo.get_poly_num();
+		if ((vtxNum == 0) || (triNum == 0)) { return nullptr; }
+		Mesh* pMsh = new Mesh();
+		pMsh->mNumVtx = vtxNum;
+		pMsh->mNumTri = triNum;
+
+		glGenBuffers(2, &pMsh->mBuffIdVtx);
+
+		if (0 != pMsh->mBuffIdVtx) {
+			Mesh::Vtx * pVtx = new Vtx[vtxNum];
+			for (uint32_t i = 0; i < vtxNum; i++) {
+				TDGeometry::Point pnt = geo.get_pnt(i);
+				pVtx[i].pos = glm::vec3(pnt.x, pnt.y, pnt.z);
+				pVtx[i].nrm = glm::vec3(pnt.nx, pnt.ny, pnt.nz);
+				pVtx[i].clr = glm::vec3(pnt.r, pnt.g, pnt.b);
+			}
+			glBindBuffer(GL_ARRAY_BUFFER, pMsh->mBuffIdVtx);
+			glBufferData(GL_ARRAY_BUFFER, vtxNum * sizeof(Vtx), pVtx, GL_STATIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			delete[] pVtx;
+		} else { gl_error(); }
+
+		if (0 != pMsh->mBuffIdIdx) {
+			size_t sizeIB = triNum * 3 * pMsh->idx_bytes();
+			char* pIdx = new char[sizeIB];
+			if (pMsh->is_idx16()) {
+				uint16_t* pIB16 = (uint16_t*)pIdx;
+				for (uint32_t i = 0; i < triNum; i++) {
+					TDGeometry::Poly pol = geo.get_poly(i);
+					for (uint32_t j = 0; j < 3; j++) {
+						*pIB16++ = (uint16_t)pol.ipnt[j];
+					}
+				}
+			} else {
+				uint32_t* pIB32 = (uint32_t*)pIdx;
+				for (uint32_t i = 0; i < triNum; i++) {
+					TDGeometry::Poly pol = geo.get_poly(i);
+					for (uint32_t j = 0; j < 3; j++) {
+						*pIB32++ = (uint32_t)pol.ipnt[j];
+					}
+				}
+			}
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMsh->mBuffIdIdx);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIB, pIdx, GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			delete[] pIdx;
+		} else { gl_error(); }
+
+		return pMsh;
+	}
+
+	void Mesh::destroy() {
+		if (0 != mBuffIdIdx) {
+			glDeleteBuffers(1, &mBuffIdIdx);
+			mBuffIdIdx = 0;
+		}
+		if (0 != mBuffIdVtx) {
+			glDeleteBuffers(1, &mBuffIdVtx);
+			mBuffIdVtx = 0;
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
+
+	void Mesh::draw(const glm::mat4x4& worldMtx) {
+		if (!s_app.valid_egl()) { return; }
+		if (0 == mBuffIdVtx) { return; }
+		if (0 == mBuffIdIdx) { return; }
+
+		glUseProgram(s_app.mGPU.programId);
+
+		glUniform3f(s_app.mGPU.prmLocInvGamma, 1.0f / s_app.mGamma.r, 1.0f / s_app.mGamma.g, 1.0f / s_app.mGamma.b);
+		glUniform3fv(s_app.mGPU.prmLocHemiSky, 1, (float*)&s_app.mLight.sky);
+		glUniform3fv(s_app.mGPU.prmLocHemiGround, 1, (float*)&s_app.mLight.ground);
+		glUniform3fv(s_app.mGPU.prmLocHemiUp, 1, (float*)&s_app.mLight.up);
+
+		glUniform3fv(s_app.mGPU.prmSpecDir, 1, (float*)&s_app.mLight.specDir);
+		glUniform3fv(s_app.mGPU.prmSpecClr, 1, (float*)&s_app.mLight.specClr);
+		glUniform1f(s_app.mGPU.prmSpecRough, s_app.mLight.specRoughness);
+
+		glUniform3fv(s_app.mGPU.prmLocViewPos, 1, (float*)&s_app.mView.mPos);
+
+		glm::mat4x4 tm = glm::transpose(s_app.mView.mViewProjMtx);
+		glUniformMatrix4fv(s_app.mGPU.prmLocViewProj, 1, GL_FALSE, (float*)&tm);
+		tm = glm::transpose(worldMtx);
+		glUniform4fv(s_app.mGPU.prmLocWMtx, 3, (float*)&tm);
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+#if 0
+		glEnable(GL_CULL_FACE);
+		glFrontFace(GL_CCW); // TD
+		glCullFace(GL_BACK);
+#endif
+
+		const GLsizei vstride = (GLsizei)sizeof(Mesh::Vtx);
+		glBindBuffer(GL_ARRAY_BUFFER, mBuffIdVtx);
+		glEnableVertexAttribArray(s_app.mGPU.attrLocPos);
+		glVertexAttribPointer(s_app.mGPU.attrLocPos, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, pos));
+		glEnableVertexAttribArray(s_app.mGPU.attrLocNrm);
+		glVertexAttribPointer(s_app.mGPU.attrLocNrm, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, nrm));
+		glEnableVertexAttribArray(s_app.mGPU.attrLocClr);
+		glVertexAttribPointer(s_app.mGPU.attrLocClr, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, clr));
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffIdIdx);
+		glDrawElements(GL_TRIANGLES, mNumTri * 3, is_idx16() ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
+
+		glDisableVertexAttribArray(s_app.mGPU.attrLocPos);
+		glDisableVertexAttribArray(s_app.mGPU.attrLocNrm);
+		glDisableVertexAttribArray(s_app.mGPU.attrLocClr);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	}
+
+	glm::mat4x4 scl(const glm::vec3& s) { return glm::scale(glm::mat4x4(1.0f), s); }
+
+	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
+		glm::vec3 rotateRadians = glm::radians(rotateDegrees);
+		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleY(rotateRadians.y) * glm::eulerAngleX(rotateRadians.x);
+		glm::mat4x4 sm = scl(scale);
+		glm::mat4x4 mtx = rm * sm;
+		mtx[3] = glm::vec4(translate, 1);
+		return mtx;
+	}
+
+	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx, float sy, float sz) {
+		return xformSRTXYZ(glm::vec3(tx, ty, tz), glm::vec3(rx, ry, rz), glm::vec3(sx, sy, sz));
 	}
 }
 
@@ -208,23 +370,15 @@ void GLESApp::init(const GLDrawCfg& cfg) {
 	mView.mWidth = cfg.width;
 	mView.mHeight = cfg.height;
 	mView.mAspect = (float)mView.mWidth / mView.mHeight;
+	mView.setFOVY(glm::radians(40.0f));
+	mView.setRange(0.1f, 1000.0f);
+
+	mClearColor = glm::vec3(0.33f, 0.44f, 0.55f);
+	mGamma = glm::vec3(2.2f);
+
 	init_wnd();
 	init_egl();
 	init_gpu();
-
-	mClearColor = glm::vec3(0.33f, 0.44f, 0.55f);
-
-	mView.set(glm::vec3(0.0f, 1.75f, 1.5f), glm::vec3(0.0f, 1.5f, 0.0f), glm::vec3(0, 1, 0));
-	mView.setFOVY(glm::radians(40.0f));
-	mView.setRange(0.1f, 1000.0f);
-	mView.update();
-
-	mLight.sky = glm::vec3(2.14318f, 1.971372f, 1.862601f);
-	mLight.ground = glm::vec3(0.15f, 0.1f, 0.075f);
-	mLight.up = glm::vec3(0, 1, 0);
-	mLight.specClr = glm::vec3(1, 1, 1);
-	mLight.specRoughness = /*1.0e-6f*/ 0.45;
-	mGamma = glm::vec3(2.2f);
 }
 
 void GLESApp::reset() {
@@ -562,154 +716,3 @@ void GLDraw::loop(void(*pLoop)()) {
 	}
 }
 #endif
-
-namespace GLDraw {
-
-	int Mesh::idx_bytes() const { return is_idx16() ? sizeof(GLushort) : sizeof(GLuint); }
-
-	// geo should contain a triangulated geometry
-	Mesh* Mesh::create(const TDGeometry& geo) {
-		uint32_t vtxNum = geo.get_pnt_num();
-		uint32_t triNum = geo.get_poly_num();
-		if ((vtxNum == 0) || (triNum == 0)) { return nullptr; }
-		Mesh* pMsh = new Mesh();
-		pMsh->mNumVtx = vtxNum;
-		pMsh->mNumTri = triNum;
-
-		glGenBuffers(2, &pMsh->mBuffIdVtx);
-
-		if (0 != pMsh->mBuffIdVtx) {
-			Mesh::Vtx * pVtx = new Vtx[vtxNum];
-			for (uint32_t i = 0; i < vtxNum; i++) {
-				TDGeometry::Point pnt = geo.get_pnt(i);
-				pVtx[i].pos = glm::vec3(pnt.x, pnt.y, pnt.z);
-				pVtx[i].nrm = glm::vec3(pnt.nx, pnt.ny, pnt.nz);
-				pVtx[i].clr = glm::vec3(pnt.r, pnt.g, pnt.b);
-			}
-			glBindBuffer(GL_ARRAY_BUFFER, pMsh->mBuffIdVtx);
-			glBufferData(GL_ARRAY_BUFFER, vtxNum * sizeof(Vtx), pVtx, GL_STATIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			delete[] pVtx;
-		} else { gl_error(); }
-
-		if (0 != pMsh->mBuffIdIdx) {
-			size_t sizeIB = triNum * 3 * pMsh->idx_bytes();
-			char* pIdx = new char[sizeIB];
-			if (pMsh->is_idx16()) {
-				uint16_t* pIB16 = (uint16_t*)pIdx;
-				for (uint32_t i = 0; i < triNum; i++) {
-					TDGeometry::Poly pol = geo.get_poly(i);
-					for (uint32_t j = 0; j < 3; j++) {
-						*pIB16++ = (uint16_t)pol.ipnt[j];
-					}
-				}
-			} else {
-				uint32_t* pIB32 = (uint32_t*)pIdx;
-				for (uint32_t i = 0; i < triNum; i++) {
-					TDGeometry::Poly pol = geo.get_poly(i);
-					for (uint32_t j = 0; j < 3; j++) {
-						*pIB32++ = (uint32_t)pol.ipnt[j];
-					}
-				}
-			}
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMsh->mBuffIdIdx);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIB, pIdx, GL_STATIC_DRAW);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			delete[] pIdx;
-		} else { gl_error(); }
-
-		return pMsh;
-	}
-
-	void Mesh::destroy() {
-		if (0 != mBuffIdIdx) {
-			glDeleteBuffers(1, &mBuffIdIdx);
-			mBuffIdIdx = 0;
-		}
-		if (0 != mBuffIdVtx) {
-			glDeleteBuffers(1, &mBuffIdVtx);
-			mBuffIdVtx = 0;
-		}
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	}
-
-	void Mesh::draw(const glm::mat4x4& worldMtx) {
-		if (!s_app.valid_egl()) { return; }
-		if (0 == mBuffIdVtx) { return; }
-		if (0 == mBuffIdIdx) { return; }
-
-		glUseProgram(s_app.mGPU.programId);
-
-		glUniform3f(s_app.mGPU.prmLocInvGamma, 1.0f / s_app.mGamma.r, 1.0f / s_app.mGamma.g, 1.0f / s_app.mGamma.b);
-		glUniform3fv(s_app.mGPU.prmLocHemiSky, 1, (float*)&s_app.mLight.sky);
-		glUniform3fv(s_app.mGPU.prmLocHemiGround, 1, (float*)&s_app.mLight.ground);
-		glUniform3fv(s_app.mGPU.prmLocHemiUp, 1, (float*)&s_app.mLight.up);
-
-		glUniform3fv(s_app.mGPU.prmSpecDir, 1, (float*)&s_app.mLight.specDir);
-		glUniform3fv(s_app.mGPU.prmSpecClr, 1, (float*)&s_app.mLight.specClr);
-		glUniform1f(s_app.mGPU.prmSpecRough, s_app.mLight.specRoughness);
-
-		glUniform3fv(s_app.mGPU.prmLocViewPos, 1, (float*)&s_app.mView.mPos);
-
-		glm::mat4x4 tm = glm::transpose(s_app.mView.mViewProjMtx);
-		glUniformMatrix4fv(s_app.mGPU.prmLocViewProj, 1, GL_FALSE, (float*)&tm);
-		tm = glm::transpose(worldMtx);
-		glUniform4fv(s_app.mGPU.prmLocWMtx, 3, (float*)&tm);
-
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-#if 0
-		glEnable(GL_CULL_FACE);
-		glFrontFace(GL_CCW); // TD
-		glCullFace(GL_BACK);
-#endif
-
-		const GLsizei vstride = (GLsizei)sizeof(Mesh::Vtx);
-		glBindBuffer(GL_ARRAY_BUFFER, mBuffIdVtx);
-		glEnableVertexAttribArray(s_app.mGPU.attrLocPos);
-		glVertexAttribPointer(s_app.mGPU.attrLocPos, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, pos));
-		glEnableVertexAttribArray(s_app.mGPU.attrLocNrm);
-		glVertexAttribPointer(s_app.mGPU.attrLocNrm, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, nrm));
-		glEnableVertexAttribArray(s_app.mGPU.attrLocClr);
-		glVertexAttribPointer(s_app.mGPU.attrLocClr, 3, GL_FLOAT, GL_FALSE, vstride, (const void*)offsetof(Mesh::Vtx, clr));
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBuffIdIdx);
-		glDrawElements(GL_TRIANGLES, mNumTri * 3, is_idx16() ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
-
-		glDisableVertexAttribArray(s_app.mGPU.attrLocPos);
-		glDisableVertexAttribArray(s_app.mGPU.attrLocNrm);
-		glDisableVertexAttribArray(s_app.mGPU.attrLocClr);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	}
-
-	glm::mat4x4 scl(const glm::vec3& s) { return glm::scale(glm::mat4x4(1.0f), s); }
-
-	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale) {
-		glm::vec3 rotateRadians = glm::radians(rotateDegrees);
-		glm::mat4x4 rm = glm::eulerAngleZ(rotateRadians.z) * glm::eulerAngleY(rotateRadians.y) * glm::eulerAngleX(rotateRadians.x);
-		glm::mat4x4 sm = scl(scale);
-		glm::mat4x4 mtx = rm * sm;
-		mtx[3] = glm::vec4(translate, 1);
-		return mtx;
-	}
-
-	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx, float sy, float sz) {
-		return xformSRTXYZ(glm::vec3(tx, ty, tz), glm::vec3(rx, ry, rz), glm::vec3(sx, sy, sz));
-	}
-
-	void adjust_view_for_bbox(const float min[3], const float max[3]) {
-		glm::vec3 vmin(min[0],min[1],min[2]);
-		glm::vec3 vmax(max[0], max[1], max[2]);
-		glm::vec3 tgt = (vmin + vmax) * 0.5f;
-		float shift = (vmax - vmin).z;
-		glm::vec3 pos = tgt;
-		pos.z += shift*4;
-
-		s_app.mView.set(pos, tgt, glm::vec3(0, 1, 0));
-		s_app.mView.update();
-	}
-}

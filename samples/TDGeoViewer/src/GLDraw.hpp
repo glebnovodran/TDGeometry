@@ -13,6 +13,13 @@ namespace GLDraw {
 	void reset();
 	void loop(void(*pLoop)());
 
+	void set_view(const glm::vec3& pos, const glm::vec3& tgt, const glm::vec3& up = glm::vec3(0, 1, 0));
+	void set_degreesFOVY(float deg);
+	void set_view_range(float znear, float zfar);
+
+	void set_hemi_light(const glm::vec3& sky, const glm::vec3& ground, const glm::vec3& up);
+	void set_spec_light(const glm::vec3& dir, const glm::vec3& clr, float roughness);
+
 	void begin();
 	void end();
 
@@ -39,7 +46,6 @@ namespace GLDraw {
 		void draw(const glm::mat4x4& worldMtx);
 	};
 
-	void adjust_view_for_bbox(const float min[3], const float max[3]);
 	glm::mat4x4 xformSRTXYZ(const glm::vec3& translate, const glm::vec3& rotateDegrees, const glm::vec3& scale = glm::vec3(1.0f));
 	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx = 1.0f, float sy = 1.0f, float sz = 1.0f);
 }
