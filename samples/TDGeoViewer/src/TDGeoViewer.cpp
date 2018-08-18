@@ -17,6 +17,7 @@ static GLDraw::Mesh* s_pMesh = nullptr;
 static void data_init(const std::string& folder) {
 	s_tdgeo.load(folder);
 	s_pMesh = GLDraw::Mesh::create(s_tdgeo);
+	s_pMesh->set_roughness(0.45f);
 }
 
 static void data_reset() {
@@ -42,7 +43,7 @@ static void view_light_init() {
 	float roughness = 0.45f;
 
 	GLDraw::set_hemi_light(sky, ground, up);
-	GLDraw::set_spec_light(specDir, specClr , roughness);
+	GLDraw::set_spec_light(specDir, specClr);
 }
 
 static void main_loop() {

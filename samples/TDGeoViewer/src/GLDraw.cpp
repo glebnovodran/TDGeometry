@@ -140,7 +140,6 @@ static struct GLESApp {
 		glm::vec3 up;
 		glm::vec3 specDir;
 		glm::vec3 specClr;
-		float specRoughness;
 	} mLight;
 
 	glm::vec3 mGamma;
@@ -223,10 +222,9 @@ namespace GLDraw {
 		s_app.mLight.up = up;
 	}
 
-	void set_spec_light(const glm::vec3& dir, const glm::vec3& clr, float roughness) {
+	void set_spec_light(const glm::vec3& dir, const glm::vec3& clr) {
 		s_app.mLight.specDir = dir;
 		s_app.mLight.specClr = clr;
-		s_app.mLight.specRoughness = roughness;
 	}
 
 	int Mesh::idx_bytes() const { return is_idx16() ? sizeof(GLushort) : sizeof(GLuint); }
@@ -312,7 +310,7 @@ namespace GLDraw {
 
 		glUniform3fv(s_app.mGPU.prmSpecDir, 1, (float*)&s_app.mLight.specDir);
 		glUniform3fv(s_app.mGPU.prmSpecClr, 1, (float*)&s_app.mLight.specClr);
-		glUniform1f(s_app.mGPU.prmSpecRough, s_app.mLight.specRoughness);
+		glUniform1f(s_app.mGPU.prmSpecRough, mRoughness);
 
 		glUniform3fv(s_app.mGPU.prmLocViewPos, 1, (float*)&s_app.mView.mPos);
 
