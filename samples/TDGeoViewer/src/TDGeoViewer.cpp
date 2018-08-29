@@ -17,11 +17,33 @@ static GLDraw::Mesh* s_pMesh = nullptr;
 static void data_init(const std::string& folder) {
 	s_tdgeo.load(folder);
 	s_pMesh = GLDraw::Mesh::create(s_tdgeo);
+	s_pMesh->set_roughness(0.45f);
 }
 
 static void data_reset() {
 	s_pMesh->destroy();
 	s_pMesh = nullptr;
+}
+
+static void view_light_init() {
+	TDGeometry::BBox bbox = s_tdgeo.bbox();
+	glm::vec3 vmin(bbox.min[0], bbox.min[1], bbox.min[2]);
+	glm::vec3 vmax(bbox.max[0], bbox.max[1], bbox.max[2]);
+	glm::vec3 tgt = (vmin + vmax) * 0.5f;
+	float shift = (vmax - vmin).z;
+	glm::vec3 pos = tgt;
+	pos.z += shift * 4;
+	GLDraw::set_view(pos, tgt);
+
+	glm::vec3 sky(2.14318f, 1.971372f, 1.862601f);
+	glm::vec3 ground(0.15f, 0.1f, 0.075f);
+	glm::vec3 up = glm::vec3(0, 1, 0);
+	glm::vec3 specDir = glm::normalize(tgt - (pos + glm::vec3(0.0f, 1.0f, 0.0f)));
+	glm::vec3 specClr(1, 0.9f, 0.85f);
+	float roughness = 0.45f;
+
+	GLDraw::set_hemi_light(sky, ground, up);
+	GLDraw::set_spec_light(specDir, specClr);
 }
 
 static void main_loop() {
@@ -45,9 +67,10 @@ int main(int argc, char **argv) {
 	cfg.height = 768;
 	GLDraw::init(cfg);
 	data_init("../../data/geo");
-	TDGeometry::BBox bbox = s_tdgeo.bbox();
-	GLDraw::adjust_view_for_bbox(bbox.min, bbox.max);
+	view_light_init();
+
 	GLDraw::loop(main_loop);
+
 	data_reset();
 	GLDraw::reset();
 
