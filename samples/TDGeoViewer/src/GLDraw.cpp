@@ -605,6 +605,9 @@ void GLESApp::init_wnd() {
 }
 
 void GLESApp::reset_wnd() {
+	if (mhDC) {
+		ReleaseDC(mhWnd, mhDC);
+	}
 	UnregisterClass(s_drwClassName, mhInstance);
 }
 
