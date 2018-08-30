@@ -276,7 +276,7 @@ namespace GLDraw {
 		if (polNum == 0) { return nullptr; }
 
 		uint32_t triNum = 0;
-		for (int i = 0; i < polNum; ++i) {
+		for (uint32_t i = 0; i < polNum; ++i) {
 			TDGeometry::Poly pol = geo.get_poly(i);
 			if (pol.nvtx == 3) {
 				triNum += 1;
@@ -293,7 +293,7 @@ namespace GLDraw {
 		glGenBuffers(2, &pMsh->mBuffIdVtx);
 
 		if (0 != pMsh->mBuffIdVtx) {
-			Mesh::Vtx * pVtx = new Vtx[vtxNum];
+			Mesh::Vtx* pVtx = new Vtx[vtxNum];
 			for (uint32_t i = 0; i < vtxNum; i++) {
 				TDGeometry::Point pnt = geo.get_pnt(i);
 				pVtx[i].pos = glm::vec3(pnt.x, pnt.y, pnt.z);
