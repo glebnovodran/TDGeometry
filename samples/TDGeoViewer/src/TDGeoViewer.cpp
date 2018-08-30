@@ -19,11 +19,11 @@ static bool data_init(const std::string& folder) {
 	using namespace std;
 
 	if (!s_tdgeo.load(folder)) {
-		cout << "Couldn't load " << folder << endl;
+		cout << "Couldn't load " << folder.c_str() << endl;
 	}
 	s_pMesh = GLDraw::Mesh::create(s_tdgeo);
 	if (s_pMesh == nullptr) {
-		cout << "Couldn't create mesh out of " << folder << endl;
+		cout << "Couldn't create mesh out of " << folder.c_str() << endl;
 		return false;
 	}
 	s_pMesh->set_roughness(0.45f);

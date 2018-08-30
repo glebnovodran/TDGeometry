@@ -657,8 +657,8 @@ void GLESApp::init_wnd() {
 }
 
 void GLESApp::reset_wnd() {
-	if (mhDC) {
-		ReleaseDC(mhWnd, mhDC);
+	if (mNativeDisplayHandle) {
+		ReleaseDC(mNativeWindow, mNativeDisplayHandle);
 	}
 	UnregisterClass(s_drwClassName, mhInstance);
 }
