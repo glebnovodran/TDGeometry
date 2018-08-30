@@ -174,6 +174,44 @@ static struct GLESApp {
 
 static bool s_initFlg = false;
 
+static glm::vec3 geo_pnt_pos(const TDGeometry& geo, int ipnt) {
+	glm::vec3 v;
+	TDGeometry::Point p = geo.get_pnt(ipnt);
+	return glm::vec3(p.x, p.y, p.z);
+}
+
+static int get_pol_tris(uint32_t vlst[6], const TDGeometry& geo, int polIdx) {
+	using namespace glm;
+	TDGeometry::Poly pol = geo.get_poly(polIdx);
+	int ntri = 0;
+	if (pol.nvtx == 3) {
+		for (int i = 0; i < 3; ++i) {
+			vlst[i] = pol.ipnt[i];
+		}
+		ntri = 1;
+	} else if (pol.nvtx == 4) {
+		vec3 v[4];
+		for (int i = 0; i < 4; ++i) {
+			v[i] = geo_pnt_pos(geo, pol.ipnt[i]);
+		}
+		vec3 e0 = v[0] - v[1];
+		vec3 e1 = v[1] - v[2];
+		vec3 e2 = v[2] - v[3];
+		vec3 e3 = v[3] - v[0];
+		int idiv = 0;
+		if (dot(cross(e1, e2), cross(e3, e0)) > 0) idiv = 1;
+		static int div[2][6] = {
+			{0, 1, 2,  0, 2, 3},
+			{0, 1, 3,  1, 2, 3}
+		};
+		for (int i = 0; i < 6; ++i) {
+			vlst[i] = pol.ipnt[div[idiv][i]];
+		}
+		ntri = 2;
+	}
+	return ntri;
+}
+
 namespace GLDraw {
 
 	void init(const GLDrawCfg& cfg) {
@@ -230,11 +268,24 @@ namespace GLDraw {
 
 	int Mesh::idx_bytes() const { return is_idx16() ? sizeof(GLushort) : sizeof(GLuint); }
 
-	// geo should contain a triangulated geometry
+	// Geo shouls contain triangles or quads. Quads will be triangulated
 	Mesh* Mesh::create(const TDGeometry& geo) {
 		uint32_t vtxNum = geo.get_pnt_num();
-		uint32_t triNum = geo.get_poly_num();
-		if ((vtxNum == 0) || (triNum == 0)) { return nullptr; }
+		if (vtxNum == 0) { return nullptr; }
+		uint32_t polNum = geo.get_poly_num();
+		if (polNum == 0) { return nullptr; }
+
+		uint32_t triNum = 0;
+		for (int i = 0; i < polNum; ++i) {
+			TDGeometry::Poly pol = geo.get_poly(i);
+			if (pol.nvtx == 3) {
+				triNum += 1;
+			} else if (pol.nvtx == 4) {
+				triNum += 2;
+			}
+		}
+		if (triNum <= 0) return nullptr;
+
 		Mesh* pMsh = new Mesh();
 		pMsh->mNumVtx = vtxNum;
 		pMsh->mNumTri = triNum;
@@ -256,22 +307,23 @@ namespace GLDraw {
 		} else { gl_error(); }
 
 		if (0 != pMsh->mBuffIdIdx) {
+			uint32_t vlst[6];
 			size_t sizeIB = triNum * 3 * pMsh->idx_bytes();
 			char* pIdx = new char[sizeIB];
 			if (pMsh->is_idx16()) {
 				uint16_t* pIB16 = (uint16_t*)pIdx;
-				for (uint32_t i = 0; i < triNum; i++) {
-					TDGeometry::Poly pol = geo.get_poly(i);
-					for (uint32_t j = 0; j < 3; j++) {
-						*pIB16++ = (uint16_t)pol.ipnt[j];
+				for (uint32_t i = 0; i < polNum; i++) {
+					uint16_t n = get_pol_tris(vlst, geo, i);
+					for (uint16_t j = 0; j < 3 * n; j++) {
+						*pIB16++ = (uint16_t)vlst[j];
 					}
 				}
 			} else {
 				uint32_t* pIB32 = (uint32_t*)pIdx;
-				for (uint32_t i = 0; i < triNum; i++) {
-					TDGeometry::Poly pol = geo.get_poly(i);
-					for (uint32_t j = 0; j < 3; j++) {
-						*pIB32++ = (uint32_t)pol.ipnt[j];
+				for (uint16_t i = 0; i < polNum; i++) {
+					int n = get_pol_tris(vlst, geo, i);
+					for (int j = 0; j < 3 * n; j++) {
+						*pIB32++ = (uint32_t)vlst[j];
 					}
 				}
 			}

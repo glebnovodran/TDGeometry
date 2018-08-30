@@ -9,15 +9,25 @@
 	#include "X11/Xutil.h"
 #endif
 
+#include <iostream>
 #include "GLDraw.hpp"
 
 static TDGeometry s_tdgeo;
 static GLDraw::Mesh* s_pMesh = nullptr;
 
-static void data_init(const std::string& folder) {
-	s_tdgeo.load(folder);
+static bool data_init(const std::string& folder) {
+	using namespace std;
+
+	if (!s_tdgeo.load(folder)) {
+		cout << "Couldn't load " << folder << endl;
+	}
 	s_pMesh = GLDraw::Mesh::create(s_tdgeo);
+	if (s_pMesh == nullptr) {
+		cout << "Couldn't create mesh out of " << folder << endl;
+		return false;
+	}
 	s_pMesh->set_roughness(0.45f);
+	return true;
 }
 
 static void data_reset() {
@@ -66,7 +76,7 @@ int main(int argc, char **argv) {
 	cfg.width = 1024;
 	cfg.height = 768;
 	GLDraw::init(cfg);
-	data_init("../../data/geo");
+	if (!data_init("../../data/geo")) { return -1;}
 	view_light_init();
 
 	GLDraw::loop(main_loop);
