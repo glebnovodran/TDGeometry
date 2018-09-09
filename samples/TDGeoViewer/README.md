@@ -4,4 +4,4 @@ Usage:
 
 TDGeoViwer path_to_geo_folder
 
-![Screenshot](https://github.com/glebnovodran/TDGeometry/tree/master/samples/TDGeoViewer/tdgeoview.jpg)
+![Screenshot](/samples/TDGeoViewer/img/tdgeoview.png)
