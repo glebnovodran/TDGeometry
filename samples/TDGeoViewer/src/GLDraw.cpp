@@ -647,7 +647,7 @@ void GLESApp::init_wnd() {
 	int wndH = rect.bottom - rect.top;
 	TCHAR title[128];
 	ZeroMemory(title, sizeof(title));
-	_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), _T("drwEGL"), _T(__DATE__));
+	_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), _T("TDGeoViwer"), _T(__DATE__));
 	mNativeWindow = CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
 	if (mNativeWindow) {
 		ShowWindow(mNativeWindow, SW_SHOW);
