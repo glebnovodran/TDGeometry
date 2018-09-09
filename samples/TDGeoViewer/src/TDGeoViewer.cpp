@@ -9,6 +9,7 @@
 	#include "X11/Xutil.h"
 #endif
 
+#include <sstream>
 #include <iostream>
 #include "GLDraw.hpp"
 
@@ -66,17 +67,39 @@ static void main_loop() {
 	GLDraw::end();
 }
 
+void show_help() {
+	using namespace std;
+	cout << "Usage:\n";
+	cout << "TDGeoViewer <path_to_geo_folder>:\n";
+}
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
+	using namespace std;
+
+	int numArgs = 0;
+	std::string args = pCmdLine;
+
 #elif defined(UNIX)
 int main(int argc, char **argv) {
+	using namespace std;
+	std::string args = argc < 2 ? "" : argv[1];
 #endif
+
+	if (args.empty()) {
+		show_help();
+		return -1;
+	}
+
+	istringstream ss(args);
+	std::string path;
+	getline(ss, path, ' ');
+
 	GLDrawCfg cfg;
 
 	cfg.width = 1024;
 	cfg.height = 768;
 	GLDraw::init(cfg);
-	if (!data_init("../../data/geo")) { return -1;}
+	if (!data_init(path)) { return -1;}
 	view_light_init();
 
 	GLDraw::loop(main_loop);
