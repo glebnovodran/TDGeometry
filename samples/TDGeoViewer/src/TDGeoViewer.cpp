@@ -75,9 +75,7 @@ void show_help() {
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
 	using namespace std;
-
-	int numArgs = 0;
-	std::string args = pCmdLine;
+	string args = pCmdLine;
 
 #elif defined(UNIX)
 int main(int argc, char **argv) {
@@ -91,7 +89,7 @@ int main(int argc, char **argv) {
 	}
 
 	istringstream ss(args);
-	std::string path;
+	string path;
 	getline(ss, path, ' ');
 
 	GLDrawCfg cfg;

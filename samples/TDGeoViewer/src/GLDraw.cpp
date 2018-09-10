@@ -284,54 +284,57 @@ namespace GLDraw {
 				triNum += 2;
 			}
 		}
-		if (triNum <= 0) return nullptr;
+		if (triNum <= 0) { return nullptr; }
+
+		uint32_t id[2];
+		glGenBuffers(2, id);
+		if ((0 == id[0]) || (0 == id[1])) {
+			gl_error();
+			return nullptr;
+		}
 
 		Mesh* pMsh = new Mesh();
 		pMsh->mNumVtx = vtxNum;
 		pMsh->mNumTri = triNum;
+		pMsh->mBuffIdVtx = id[0];
+		pMsh->mBuffIdIdx = id[1];
 
-		glGenBuffers(2, &pMsh->mBuffIdVtx);
+		Mesh::Vtx* pVtx = new Vtx[vtxNum];
+		for (uint32_t i = 0; i < vtxNum; i++) {
+			TDGeometry::Point pnt = geo.get_pnt(i);
+			pVtx[i].pos = glm::vec3(pnt.x, pnt.y, pnt.z);
+			pVtx[i].nrm = glm::vec3(pnt.nx, pnt.ny, pnt.nz);
+			pVtx[i].clr = glm::vec3(pnt.r, pnt.g, pnt.b);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, pMsh->mBuffIdVtx);
+		glBufferData(GL_ARRAY_BUFFER, vtxNum * sizeof(Vtx), pVtx, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		delete[] pVtx;
 
-		if (0 != pMsh->mBuffIdVtx) {
-			Mesh::Vtx* pVtx = new Vtx[vtxNum];
-			for (uint32_t i = 0; i < vtxNum; i++) {
-				TDGeometry::Point pnt = geo.get_pnt(i);
-				pVtx[i].pos = glm::vec3(pnt.x, pnt.y, pnt.z);
-				pVtx[i].nrm = glm::vec3(pnt.nx, pnt.ny, pnt.nz);
-				pVtx[i].clr = glm::vec3(pnt.r, pnt.g, pnt.b);
-			}
-			glBindBuffer(GL_ARRAY_BUFFER, pMsh->mBuffIdVtx);
-			glBufferData(GL_ARRAY_BUFFER, vtxNum * sizeof(Vtx), pVtx, GL_STATIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			delete[] pVtx;
-		} else { gl_error(); }
-
-		if (0 != pMsh->mBuffIdIdx) {
-			uint32_t vlst[6];
-			size_t sizeIB = triNum * 3 * pMsh->idx_bytes();
-			char* pIdx = new char[sizeIB];
-			if (pMsh->is_idx16()) {
-				uint16_t* pIB16 = (uint16_t*)pIdx;
-				for (uint32_t i = 0; i < polNum; i++) {
-					uint16_t n = get_pol_tris(vlst, geo, i);
-					for (uint16_t j = 0; j < 3 * n; j++) {
-						*pIB16++ = (uint16_t)vlst[j];
-					}
-				}
-			} else {
-				uint32_t* pIB32 = (uint32_t*)pIdx;
-				for (uint16_t i = 0; i < polNum; i++) {
-					int n = get_pol_tris(vlst, geo, i);
-					for (int j = 0; j < 3 * n; j++) {
-						*pIB32++ = (uint32_t)vlst[j];
-					}
+		uint32_t vlst[6];
+		size_t sizeIB = triNum * 3 * pMsh->idx_bytes();
+		char* pIdx = new char[sizeIB];
+		if (pMsh->is_idx16()) {
+			uint16_t* pIB16 = (uint16_t*)pIdx;
+			for (uint32_t i = 0; i < polNum; i++) {
+				uint16_t n = get_pol_tris(vlst, geo, i);
+				for (uint16_t j = 0; j < 3 * n; j++) {
+					*pIB16++ = (uint16_t)vlst[j];
 				}
 			}
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMsh->mBuffIdIdx);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIB, pIdx, GL_STATIC_DRAW);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			delete[] pIdx;
-		} else { gl_error(); }
+		} else {
+			uint32_t* pIB32 = (uint32_t*)pIdx;
+			for (uint16_t i = 0; i < polNum; i++) {
+				int n = get_pol_tris(vlst, geo, i);
+				for (int j = 0; j < 3 * n; j++) {
+					*pIB32++ = (uint32_t)vlst[j];
+				}
+			}
+		}
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pMsh->mBuffIdIdx);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIB, pIdx, GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		delete[] pIdx;
 
 		return pMsh;
 	}
