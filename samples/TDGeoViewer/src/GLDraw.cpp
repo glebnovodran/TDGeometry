@@ -268,7 +268,7 @@ namespace GLDraw {
 
 	int Mesh::idx_bytes() const { return is_idx16() ? sizeof(GLushort) : sizeof(GLuint); }
 
-	// Geo shouls contain triangles or quads. Quads will be triangulated
+	// Geo should contain triangles or quads. Quads will be triangulated.
 	Mesh* Mesh::create(const TDGeometry& geo) {
 		uint32_t vtxNum = geo.get_pnt_num();
 		if (vtxNum == 0) { return nullptr; }
