@@ -7,7 +7,6 @@
 /x64/*
 /.vs/*
 /hou/*
-/TD/*
 *.filters
 *.user
 *.bak
