@@ -11,6 +11,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include "GLDraw.hpp"
 
 static TDGeometry s_tdgeo;
@@ -27,7 +28,6 @@ static bool data_init(const std::string& folder) {
 		cout << "Couldn't create mesh out of " << folder.c_str() << endl;
 		return false;
 	}
-	s_pMesh->set_roughness(0.45f);
 	return true;
 }
 
@@ -36,28 +36,35 @@ static void data_reset() {
 	s_pMesh = nullptr;
 }
 
-static void view_light_init() {
+static void main_loop() {
+
+	// view update
 	TDGeometry::BBox bbox = s_tdgeo.bbox();
 	glm::vec3 vmin(bbox.min[0], bbox.min[1], bbox.min[2]);
 	glm::vec3 vmax(bbox.max[0], bbox.max[1], bbox.max[2]);
-	glm::vec3 tgt = (vmin + vmax) * 0.5f;
+	glm::vec3 vsize = vmax - vmin;
+	glm::vec3 vc = (vmin + vmax) * 0.5f;
 	float shift = (vmax - vmin).z;
-	glm::vec3 pos = tgt;
-	pos.z += shift * 4;
+	glm::vec3 tgt = vc;
+	glm::vec3 pos = vc + glm::vec3(0, vsize.y * 0.2f, std::max(std::max(vsize.x, vsize.y), vsize.z) * 1.75f);
 	GLDraw::set_view(pos, tgt);
 
+	// light update
 	glm::vec3 sky(2.14318f, 1.971372f, 1.862601f);
+	sky *= 0.5f;
 	glm::vec3 ground(0.15f, 0.1f, 0.075f);
+	ground *= 0.5f;
+
 	glm::vec3 up = glm::vec3(0, 1, 0);
 	glm::vec3 specDir = glm::normalize(tgt - (pos + glm::vec3(0.0f, 1.0f, 0.0f)));
-	glm::vec3 specClr(1, 0.9f, 0.85f);
+	glm::vec3 specClr(1, 0.9f, 0.5f);
+	specClr *= 0.5f;
 	float roughness = 0.45f;
-
 	GLDraw::set_hemi_light(sky, ground, up);
 	GLDraw::set_spec_light(specDir, specClr);
-}
 
-static void main_loop() {
+	s_pMesh->set_roughness(roughness);
+
 	GLDraw::begin();
 	glm::mat4x4 mtx = glm::mat4x4(1.0f);
 	static float rotDY = 0.0f;
@@ -98,7 +105,6 @@ int main(int argc, char **argv) {
 	cfg.height = 768;
 	GLDraw::init(cfg);
 	if (!data_init(path)) { return -1;}
-	view_light_init();
 
 	GLDraw::loop(main_loop);
 
