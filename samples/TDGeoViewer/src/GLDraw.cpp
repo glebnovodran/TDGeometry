@@ -19,6 +19,8 @@
 #include "GLDraw.hpp"
 #include <gtx/euler_angles.hpp>
 
+static const char* s_applicationName = "TDGeoViewer";
+
 static void sys_dbg_msg(const char* pFmt, ...) {
 	char buf[1024];
 	va_list lst;
@@ -650,7 +652,7 @@ void GLESApp::init_wnd() {
 	int wndH = rect.bottom - rect.top;
 	TCHAR title[128];
 	ZeroMemory(title, sizeof(title));
-	_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), _T("TDGeoViwer"), _T(__DATE__));
+	_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), s_applicationName, _T(__DATE__));
 	mNativeWindow = CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
 	if (mNativeWindow) {
 		ShowWindow(mNativeWindow, SW_SHOW);
@@ -686,7 +688,6 @@ void GLDraw::loop(void(*pLoop)()) {
 	}
 }
 #elif defined(X11)
-static const char* s_applicationName = "TDGeoViewer";
 
 static int wait_for_MapNotify(Display* pDisp, XEvent* pEvt, char* pArg) 
 {
