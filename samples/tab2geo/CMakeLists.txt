@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
+project(tab2geo LANGUAGES CXX)
 
 message(STATUS, "CMAKE_BINARY_DIR :")
 message(STATUS, ${CMAKE_BINARY_DIR})
@@ -22,5 +23,3 @@ add_executable(tab2geo
 
 target_include_directories (tab2geo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories (tab2geo PUBLIC ${TDGEO_SRC_DIR})
-
-#target_link_libraries(MotEqu LINK_PUBLIC Groundwork)

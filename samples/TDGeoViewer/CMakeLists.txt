@@ -16,8 +16,8 @@ if (UNIX)
 	add_definitions(-DUNIX)
 	set(EXTRA_LIBS ${CMAKE_DL_LIBS})
 
-	if (NOT WS) #We support building for several Windowing Systems. Typical desktop systems support X11 and XCB, Wayland is catching on. NullWS is used by some development platforms/ testchip.
-		message("WS Variable not set. If you wish to build for X11, Wayland or another supported windowing system, please pass -DWS=X11 or -DWS=Wayland etc. to CMake")
+	if (NOT WS)
+		message("WS Variable not set. If you wish to build for X11, Wayland or another supported windowing system, please pass -DWS=X11 or -DWS=Wayland etc to CMake. At the moment only X11 build is supported.")
 	endif()
 	if (${WS} STREQUAL X11)
 		find_package(X11 REQUIRED)

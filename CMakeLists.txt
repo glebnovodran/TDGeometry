@@ -14,12 +14,3 @@ set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_RELEASE_LINK_FLAGS}
 
 add_subdirectory("./samples/tab2geo")
 add_subdirectory("./samples/TDGeoViewer")
-#add_executable(td_geo_view
-#	src/TDGeometry.cpp
-#	src/GLDraw.cpp
-#	src/TDGeoViewer.cpp
-#)
-
-#message("${POWERVR_SDK_ROOT}/include")
-#target_include_directories (td_geo_view PUBLIC "${POWERVR_SDK_ROOT}/include")
-#target_include_directories (td_geo_view PUBLIC "${POWERVR_SDK_ROOT}/external/glm")
