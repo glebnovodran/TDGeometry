@@ -8,8 +8,8 @@
 
 class TDGeometry {
 public:
-	static const int MAX_POLY_VERTS = 4;
-
+	//static const int MAX_POLY_VERTS = 4;
+	enum { MAX_POLY_VERTS = 4 };
 	struct Point {
 		float x, y, z;
 		float nx, ny, nz;
