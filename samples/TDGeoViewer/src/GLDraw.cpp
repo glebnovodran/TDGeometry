@@ -576,7 +576,7 @@ void GLESApp::init_gpu() {
 		glGetProgramiv(mGPU.programId, GL_INFO_LOG_LENGTH, &infoLen);
 		char* pInfo = new char[infoLen];
 		if (pInfo) {
-			glGetShaderInfoLog(mGPU.shaderIdPix, infoLen, &infoLen, pInfo);
+			glGetProgramInfoLog(mGPU.programId, infoLen, &infoLen, pInfo);
 			sys_dbg_msg(pInfo);
 			delete[] pInfo;
 		}
