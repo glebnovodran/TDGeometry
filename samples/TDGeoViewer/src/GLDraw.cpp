@@ -49,6 +49,11 @@ bool gl_error() {
 	return false;
 }
 
+bool egl_has_extention(EGLDisplay eglDisplay, const char* name) {
+	const char* extns = eglQueryString(eglDisplay, EGL_EXTENSIONS);
+	return extns != NULL && strstr(extns, name);
+}
+
 std::string load_text(const std::string& path) {
 	std::ifstream is(path);
 	return std::string((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
@@ -467,6 +472,7 @@ void GLESApp::init_egl() {
 		return;
 	}
 
+	EGLint ctxType = egl_has_extention(mEGL.display, "EGL_KHR_create_context") ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
 	static EGLint cfgAttrs[] = {
 		EGL_RED_SIZE, 8,
 		EGL_GREEN_SIZE, 8,
@@ -474,7 +480,7 @@ void GLESApp::init_egl() {
 		EGL_ALPHA_SIZE, 8,
 		EGL_DEPTH_SIZE, 24,
 		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+		EGL_RENDERABLE_TYPE, ctxType,
 		EGL_NONE
 	};
 	EGLint ncfg = 0;
@@ -501,6 +507,7 @@ void GLESApp::init_egl() {
 		sys_dbg_msg("eglCreateContext failed");
 		return;
 	}
+
 	if (!eglMakeCurrent(mEGL.display, mEGL.surface, mEGL.surface, mEGL.context)) {
 		sys_dbg_msg("eglMakeCurrent failed");
 	}
