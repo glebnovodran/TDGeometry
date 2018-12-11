@@ -492,7 +492,7 @@ void GLESApp::init_egl() {
 	}
 
 	static EGLint ctxAttrs[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_CONTEXT_CLIENT_VERSION, 3,
 		EGL_NONE
 	};
 
