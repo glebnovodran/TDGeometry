@@ -734,18 +734,18 @@ void GLESApp::init_wnd() {
 	windowAttributes.colormap = colorMap;
 	windowAttributes.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask | KeyPressMask;
 	
-	mNativeWindow = XCreateWindow(mpNativeDisplay,              // The display used to create the window
-	                              rootWindow,                   // The parent (root) window - the desktop
-	                              0,                            // The horizontal (x) origin of the window
-	                              0,                            // The vertical (y) origin of the window
-	                              mView.mWidth,                 // The width of the window
-	                              mView.mHeight,                // The height of the window
-	                              0,                            // Border size - set it to zero
-	                              pVisualInfo->depth,           // Depth from the visual info
-	                              InputOutput,                  // Window type - this specifies InputOutput.
-	                              pVisualInfo->visual,          // Visual to use
-	                              CWEventMask | CWColormap,     // Mask specifying these have been defined in the window attributes
-	                              &windowAttributes);           // Pointer to the window attribute structure
+	mNativeWindow = XCreateWindow(mpNativeDisplay,
+	                              rootWindow,
+	                              0,
+	                              0,
+	                              mView.mWidth,
+	                              mView.mHeight,
+	                              0,
+	                              pVisualInfo->depth,
+	                              InputOutput,
+	                              pVisualInfo->visual,
+	                              CWEventMask | CWColormap,
+	                              &windowAttributes);
 
 	XMapWindow(mpNativeDisplay, mNativeWindow);
 	XStoreName(mpNativeDisplay, mNativeWindow, s_applicationName);
