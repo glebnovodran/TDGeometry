@@ -530,7 +530,7 @@ void GLESApp::init_gpu() {
 
 	if (!valid_egl()) { return; }
 
-	std::string vtxSrc = load_text("../../data/shader/vtx.vert");
+	std::string vtxSrc = load_text("vtx.vert");
 	if (vtxSrc.length() < 1) { return; }
 	const char* pVtxSrc = vtxSrc.c_str();
 	mGPU.shaderIdVtx = glCreateShader(GL_VERTEX_SHADER);
@@ -551,7 +551,7 @@ void GLESApp::init_gpu() {
 		return;
 	}
 
-	std::string pixSrc = load_text("../../data/shader/hemidir.frag");
+	std::string pixSrc = load_text("hemidir.frag");
 	if (pixSrc.length() < 1) return;
 	const char* pPixSrc = pixSrc.c_str();
 	mGPU.shaderIdPix = glCreateShader(GL_FRAGMENT_SHADER);
