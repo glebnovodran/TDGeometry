@@ -17,6 +17,7 @@
 #include <DynamicGles.h>
 
 #include "GLDraw.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
 #include <gtx/euler_angles.hpp>
 
 static const char* s_applicationName = "TDGeoViewer";
@@ -471,8 +472,8 @@ void GLESApp::init_egl() {
 		sys_dbg_msg("eglBindAPI failed");
 		return;
 	}
-
-	EGLint ctxType = egl_has_extention(mEGL.display, "EGL_KHR_create_context") ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
+	bool hasCreateCtxExt = egl_has_extention(mEGL.display, "EGL_KHR_create_context");
+	EGLint ctxType = hasCreateCtxExt ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
 	static EGLint cfgAttrs[] = {
 		EGL_RED_SIZE, 8,
 		EGL_GREEN_SIZE, 8,
@@ -498,7 +499,7 @@ void GLESApp::init_egl() {
 	}
 
 	static EGLint ctxAttrs[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 3,
+		EGL_CONTEXT_CLIENT_VERSION, hasCreateCtxExt ? 3 : 2,
 		EGL_NONE
 	};
 
