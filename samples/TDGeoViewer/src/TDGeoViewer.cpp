@@ -79,16 +79,10 @@ void show_help() {
 	cout << "Usage:\n";
 	cout << "TDGeoViewer <path_to_geo_folder>:\n";
 }
-#ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-	using namespace std;
-	string args = pCmdLine;
 
-#elif defined(UNIX)
 int main(int argc, char **argv) {
 	using namespace std;
 	std::string args = argc < 2 ? "" : argv[1];
-#endif
 
 	if (args.empty()) {
 		show_help();

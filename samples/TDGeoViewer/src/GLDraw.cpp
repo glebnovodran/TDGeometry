@@ -14,7 +14,15 @@
 #include <cstdarg>
 #include <memory>
 
+// undefine _CONSOLE for DynamicGles.h include to avoid PVR SDK R2
+// compilation problem with win32 console apps
+#if defined(_WIN32)
+#undef _CONSOLE
+#endif
 #include <DynamicGles.h>
+#if defined(_WIN32)
+#define _CONSOLE
+#endif
 
 #include "GLDraw.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
@@ -183,7 +191,6 @@ static struct GLESApp {
 static bool s_initFlg = false;
 
 static glm::vec3 geo_pnt_pos(const TDGeometry& geo, int ipnt) {
-	glm::vec3 v;
 	TDGeometry::Point p = geo.get_pnt(ipnt);
 	return glm::vec3(p.x, p.y, p.z);
 }
