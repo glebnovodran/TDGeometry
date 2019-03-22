@@ -21,10 +21,8 @@ extern const char* s_applicationName;
 #define _CONSOLE
 #endif
 
-//#include <fstream>
 #include <iostream>
 #include <cstdarg>
-//#include <memory>
 
 #include "GLSys.hpp"
 
@@ -115,7 +113,6 @@ static struct GLSysGlobal {
 	void reset_egl();
 } s_global;
 
-//s_glb
 namespace GLSys {
 
 	bool s_initFlg = false;
@@ -211,8 +208,9 @@ namespace GLSys {
 						glLinkProgram(pid);
 						GLint status = 0;
 						glGetProgramiv(pid, GL_LINK_STATUS, &status);
-						if (!status) {
+						if (status) {
 							init.linked = 1;
+						} else {
 							GLint infoLen = 0;
 							glGetProgramiv(pid, GL_INFO_LOG_LENGTH, &infoLen);
 							if (infoLen > 0) {

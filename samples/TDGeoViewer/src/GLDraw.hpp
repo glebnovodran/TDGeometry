@@ -1,4 +1,3 @@
-#include <string> // TODO: remove ?
 #include <glm.hpp>
 #define GLM_FORCE_RADIANS
 #include <gtc/matrix_transform.hpp>

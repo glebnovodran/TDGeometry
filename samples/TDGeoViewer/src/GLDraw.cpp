@@ -1,11 +1,3 @@
-#define _WIN32_WINNT 0x0500
-
-#if defined(X11)
-	#include <unistd.h>
-	#include "X11/Xlib.h"
-	#include "X11/Xutil.h"
-#endif
-
 #define DYNAMICGLES_NO_NAMESPACE
 #define DYNAMICEGL_NO_NAMESPACE
 
@@ -45,31 +37,6 @@ std::string load_text(const std::string& path) {
 static struct GLESApp {
 	char* mAppPath;
 
-#ifdef _WIN32
-	HINSTANCE mhInstance;
-	ATOM mClassAtom;
-	HWND mNativeWindow;
-#elif defined(UNIX)
-	#if defined(X11)
-		Display* mpNativeDisplay;
-		Window mNativeWindow;
-	#endif
-#endif
-	EGLNativeDisplayType mNativeDisplayHandle; // Win : HDC; X11 : Display
-
-	struct EGL {
-		EGLDisplay display;
-		EGLSurface surface;
-		EGLContext context;
-		EGLConfig config;
-
-		void reset() {
-			display = EGL_NO_DISPLAY;
-			surface = EGL_NO_SURFACE;
-			context = EGL_NO_CONTEXT;
-		}
-	} mEGL;
-
 	struct GPU {
 		GLuint shaderIdVtx;
 		GLuint shaderIdFrag;
@@ -98,7 +65,6 @@ static struct GLESApp {
 		glm::vec3 mUp;
 		int mWidth;
 		int mHeight;
-		//float mAspect;
 		float mFOVY;
 		float mNear;
 		float mFar;
@@ -218,13 +184,11 @@ namespace GLDraw {
 
 	void begin() {
 		if (!s_initFlg) { return; }
-		//if (!GLSys::valid()) { return; }
 		s_app.frame_clear();
 	}
 
 	void end() {
 		if (!s_initFlg) { return; }
-		//if (!GLSys::valid()) { return; }
 		GLSys::swap();
 	}
 
@@ -427,7 +391,6 @@ bool GLESApp::init(const GLDrawCfg& cfg) {
 
 	mView.mWidth = cfg.w;
 	mView.mHeight = cfg.h;
-	//mView.mAspect = (float)mView.mWidth / mView.mHeight;
 	mView.set_FOVY(glm::radians(40.0f));
 	mView.set_range(0.1f, 1000.0f);
 
@@ -485,7 +448,3 @@ void GLESApp::reset_gpu() {
 	glDeleteShader(mGPU.shaderIdVtx);
 	glDeleteProgram(mGPU.programId);
 }
-
-//void GLESApp::reset_sys() {}
-
-
