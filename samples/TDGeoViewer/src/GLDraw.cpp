@@ -108,11 +108,81 @@ static struct GLESApp {
 
 	glm::vec3 mClearColor;
 
-	bool init_gpu();
-	void reset_gpu();
+	bool init_gpu() {
+		using namespace std;
+		GLint status;
+		GLint infoLen = 0;
 
-	bool init(const GLDrawCfg& cfg);
-	void reset();
+		if (!GLSys::valid()) { return false; }
+
+		string appPath = string(mAppPath);
+		string wkFolder = appPath.substr(0, appPath.rfind(PATH_SEPARATOR));
+
+		string vtxPath = wkFolder + PATH_SEPARATOR + "vtx.vert";
+		std::string srcVtx = load_text(vtxPath);
+
+		if (srcVtx.length() < 1) { return false; }
+		std::string fragPath = wkFolder + PATH_SEPARATOR + "hemidir.frag";
+		std::string srcFrag = load_text(fragPath);
+		if (srcFrag.length() < 1) { return false; }
+
+		mGPU.programId = GLSys::compile_prog_strs(srcVtx, srcFrag, &mGPU.shaderIdVtx, &mGPU.shaderIdFrag);
+
+		if (mGPU.programId) {
+			mGPU.attrLocPos = glGetAttribLocation(mGPU.programId, "vtxPos");
+			mGPU.attrLocNrm = glGetAttribLocation(mGPU.programId, "vtxNrm");
+			mGPU.attrLocClr = glGetAttribLocation(mGPU.programId, "vtxClr");
+			mGPU.prmLocWMtx = glGetUniformLocation(mGPU.programId, "prmWMtx");
+			mGPU.prmLocViewProj = glGetUniformLocation(mGPU.programId, "prmViewProj");
+			mGPU.prmLocViewPos = glGetUniformLocation(mGPU.programId, "prmViewPos");
+			mGPU.prmLocHemiSky = glGetUniformLocation(mGPU.programId, "prmHemiSky");
+			mGPU.prmLocHemiGround = glGetUniformLocation(mGPU.programId, "prmHemiGround");
+			mGPU.prmLocHemiUp = glGetUniformLocation(mGPU.programId, "prmHemiUp");
+			mGPU.prmSpecDir = glGetUniformLocation(mGPU.programId, "prmSpecDir");
+			mGPU.prmSpecClr = glGetUniformLocation(mGPU.programId, "prmSpecClr");
+			mGPU.prmSpecRough = glGetUniformLocation(mGPU.programId, "prmSpecRough");
+			mGPU.prmLocInvGamma = glGetUniformLocation(mGPU.programId, "prmInvGamma");
+		}
+		return mGPU.programId != 0;
+	}
+	void reset_gpu() {
+		glDeleteShader(mGPU.shaderIdFrag);
+		glDeleteShader(mGPU.shaderIdVtx);
+		glDeleteProgram(mGPU.programId);
+	}
+
+	bool init(const GLDrawCfg& cfg)  {
+		GLSysCfg oglCfg;
+		::memset(&oglCfg, 0, sizeof(oglCfg));
+		oglCfg.x = cfg.x;
+		oglCfg.y = cfg.y;
+		oglCfg.w = cfg.w;
+		oglCfg.h = cfg.h;
+		GLSys::init(oglCfg);
+
+		if (!GLSys::valid()) { return false; }
+
+		mAppPath = cfg.appPath;
+		if (!init_gpu()) {
+			sys_dbg_msg("GPU initialization failed\n");
+			return false;
+		}
+
+		mView.mWidth = cfg.w;
+		mView.mHeight = cfg.h;
+		mView.set_FOVY(glm::radians(40.0f));
+		mView.set_range(0.1f, 1000.0f);
+
+		mClearColor = glm::vec3(0.33f, 0.44f, 0.55f);
+		mGamma = glm::vec3(2.2f);
+		return true;
+	}
+
+	void reset() {
+		GLSys::stop();
+		reset_gpu();
+		GLSys::reset();
+	}
 
 	void frame_clear() const {
 		glColorMask(true, true, true, true);
@@ -370,81 +440,4 @@ namespace GLDraw {
 	glm::mat4x4 xformSRTXYZ(float tx, float ty, float tz, float rx, float ry, float rz, float sx, float sy, float sz) {
 		return xformSRTXYZ(glm::vec3(tx, ty, tz), glm::vec3(rx, ry, rz), glm::vec3(sx, sy, sz));
 	}
-}
-
-bool GLESApp::init(const GLDrawCfg& cfg) {
-	GLSysCfg oglCfg;
-	::memset(&oglCfg, 0, sizeof(oglCfg));
-	oglCfg.x = cfg.x;
-	oglCfg.y = cfg.y;
-	oglCfg.w = cfg.w;
-	oglCfg.h = cfg.h;
-	GLSys::init(oglCfg);
-
-	if (!GLSys::valid()) { return false; }
-
-	mAppPath = cfg.appPath;
-	if (!init_gpu()) {
-		sys_dbg_msg("GPU initialization failed\n");
-		return false;
-	}
-
-	mView.mWidth = cfg.w;
-	mView.mHeight = cfg.h;
-	mView.set_FOVY(glm::radians(40.0f));
-	mView.set_range(0.1f, 1000.0f);
-
-	mClearColor = glm::vec3(0.33f, 0.44f, 0.55f);
-	mGamma = glm::vec3(2.2f);
-	return true;
-}
-
-void GLESApp::reset() {
-	GLSys::stop();
-	reset_gpu();
-	GLSys::reset();
-}
-
-bool GLESApp::init_gpu() {
-	using namespace std;
-	GLint status;
-	GLint infoLen = 0;
-
-	if (!GLSys::valid()) { return false; }
-
-	string appPath = string(mAppPath);
-	string wkFolder = appPath.substr(0, appPath.rfind(PATH_SEPARATOR));
-
-	string vtxPath = wkFolder + PATH_SEPARATOR + "vtx.vert";
-	std::string srcVtx = load_text(vtxPath);
-
-	if (srcVtx.length() < 1) { return false; }
-	std::string fragPath = wkFolder + PATH_SEPARATOR + "hemidir.frag";
-	std::string srcFrag = load_text(fragPath);
-	if (srcFrag.length() < 1) { return false; }
-
-	mGPU.programId = GLSys::compile_prog_strs(srcVtx, srcFrag, &mGPU.shaderIdVtx, &mGPU.shaderIdFrag);
-
-	if (mGPU.programId) {
-		mGPU.attrLocPos = glGetAttribLocation(mGPU.programId, "vtxPos");
-		mGPU.attrLocNrm = glGetAttribLocation(mGPU.programId, "vtxNrm");
-		mGPU.attrLocClr = glGetAttribLocation(mGPU.programId, "vtxClr");
-		mGPU.prmLocWMtx = glGetUniformLocation(mGPU.programId, "prmWMtx");
-		mGPU.prmLocViewProj = glGetUniformLocation(mGPU.programId, "prmViewProj");
-		mGPU.prmLocViewPos = glGetUniformLocation(mGPU.programId, "prmViewPos");
-		mGPU.prmLocHemiSky = glGetUniformLocation(mGPU.programId, "prmHemiSky");
-		mGPU.prmLocHemiGround = glGetUniformLocation(mGPU.programId, "prmHemiGround");
-		mGPU.prmLocHemiUp = glGetUniformLocation(mGPU.programId, "prmHemiUp");
-		mGPU.prmSpecDir = glGetUniformLocation(mGPU.programId, "prmSpecDir");
-		mGPU.prmSpecClr = glGetUniformLocation(mGPU.programId, "prmSpecClr");
-		mGPU.prmSpecRough = glGetUniformLocation(mGPU.programId, "prmSpecRough");
-		mGPU.prmLocInvGamma = glGetUniformLocation(mGPU.programId, "prmInvGamma");
-	}
-	return mGPU.programId != 0;
-}
-
-void GLESApp::reset_gpu() {
-	glDeleteShader(mGPU.shaderIdFrag);
-	glDeleteShader(mGPU.shaderIdVtx);
-	glDeleteProgram(mGPU.programId);
 }
