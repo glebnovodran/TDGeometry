@@ -17,6 +17,8 @@
 static TDGeometry s_tdgeo;
 static GLDraw::Mesh* s_pMesh = nullptr;
 
+const char* s_applicationName = "TDGeoViewer";
+
 static bool data_init(const std::string& folder) {
 	using namespace std;
 
@@ -94,10 +96,13 @@ int main(int argc, char **argv) {
 	getline(ss, path, ' ');
 
 	GLDrawCfg cfg;
+	cfg.x = 0;
+	cfg.y = 0;
+	cfg.w = 1024;
+	cfg.h = 768;
+	cfg.appPath = argv[0];
 
-	cfg.width = 1024;
-	cfg.height = 768;
-	GLDraw::init(cfg);
+	if (!GLDraw::init(cfg)) { return -1; };
 	if (!data_init(path)) { return -1;}
 
 	GLDraw::loop(main_loop);

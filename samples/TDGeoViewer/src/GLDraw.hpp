@@ -1,27 +1,30 @@
+#include <string> // TODO: remove ?
 #include <glm.hpp>
 #define GLM_FORCE_RADIANS
 #include <gtc/matrix_transform.hpp>
 #include <TDGeometry.hpp>
 
 struct GLDrawCfg {
-	int width;
-	int height;
+	char* appPath;
+	int x;
+	int y;
+	int w;
+	int h;
 };
 
 namespace GLDraw {
-	void init(const GLDrawCfg& cfg);
+	bool init(const GLDrawCfg& cfg);
 	void reset();
+	void begin();
+	void end();
 	void loop(void(*pLoop)());
 
 	void set_view(const glm::vec3& pos, const glm::vec3& tgt, const glm::vec3& up = glm::vec3(0, 1, 0));
-	void set_degreesFOVY(float deg);
+	void set_FOVY_degrees(float deg);
 	void set_view_range(float znear, float zfar);
 
 	void set_hemi_light(const glm::vec3& sky, const glm::vec3& ground, const glm::vec3& up);
 	void set_spec_light(const glm::vec3& dir, const glm::vec3& clr);
-
-	void begin();
-	void end();
 
 	class Mesh {
 

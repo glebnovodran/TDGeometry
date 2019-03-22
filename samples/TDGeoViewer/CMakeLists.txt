@@ -29,6 +29,7 @@ set(TDGEO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 add_executable(TDGeoViewer
 	../../src/TDGeometry.cpp
 	src/GLDraw.cpp
+	src/GLSys.cpp
 	src/TDGeoViewer.cpp
 )
 

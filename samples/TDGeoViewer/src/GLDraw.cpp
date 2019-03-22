@@ -24,44 +24,18 @@
 #define _CONSOLE
 #endif
 
+#include "GLSys.hpp"
 #include "GLDraw.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <gtx/euler_angles.hpp>
 
-static const char* s_applicationName = "TDGeoViewer";
 
-static void sys_dbg_msg(const char* pFmt, ...) {
-	char buf[1024];
-	va_list lst;
-	va_start(lst, pFmt);
-#ifdef _MSC_VER
-	vsprintf_s(buf, sizeof(buf), pFmt, lst);
-#else
-	vsprintf(buf, pFmt, lst);
-#endif
-	va_end(lst);
 #ifdef _WIN32
-	OutputDebugStringA(buf);
-#elif defined(UNIX)
-	std::cout << buf << std::endl;
+#define PATH_SEPARATOR '\\'
+#else
+#define PATH_SEPARATOR '/'
 #endif
-}
 
-bool gl_error() {
-#ifdef _DEBUG
-	GLenum lastError = glGetError();
-	if (lastError != GL_NO_ERROR) {
-		sys_dbg_msg("GLES failed with (%x).\n", lastError);
-		return true;
-	}
-#endif
-	return false;
-}
-
-bool egl_has_extention(EGLDisplay eglDisplay, const char* name) {
-	const char* extns = eglQueryString(eglDisplay, EGL_EXTENSIONS);
-	return extns != NULL && strstr(extns, name);
-}
 
 std::string load_text(const std::string& path) {
 	std::ifstream is(path);
@@ -69,6 +43,8 @@ std::string load_text(const std::string& path) {
 }
 
 static struct GLESApp {
+	char* mAppPath;
+
 #ifdef _WIN32
 	HINSTANCE mhInstance;
 	ATOM mClassAtom;
@@ -96,7 +72,7 @@ static struct GLESApp {
 
 	struct GPU {
 		GLuint shaderIdVtx;
-		GLuint shaderIdPix;
+		GLuint shaderIdFrag;
 		GLuint programId;
 		GLint attrLocPos;
 		GLint attrLocNrm;
@@ -122,7 +98,7 @@ static struct GLESApp {
 		glm::vec3 mUp;
 		int mWidth;
 		int mHeight;
-		float mAspect;
+		//float mAspect;
 		float mFOVY;
 		float mNear;
 		float mFar;
@@ -133,18 +109,22 @@ static struct GLESApp {
 			mUp = up;
 		}
 
-		void setRange(float znear, float zfar) {
+		void set_range(float znear, float zfar) {
 			mNear = znear;
 			mFar = zfar;
 		}
 
-		void setFOVY(float fovy) {
+		void set_FOVY(float fovy) {
 			mFOVY = fovy;
+		}
+
+		float get_aspect() const {
+			return (float)mWidth / (float)mHeight;
 		}
 
 		void update() {
 			mViewMtx = glm::lookAt(mPos, mTgt, mUp);
-			mProjMtx = glm::perspective(mFOVY, mAspect, mNear, mFar);
+			mProjMtx = glm::perspective(mFOVY, get_aspect(), mNear, mFar);
 			mViewProjMtx = mProjMtx * mViewMtx;
 		}
 
@@ -162,22 +142,11 @@ static struct GLESApp {
 
 	glm::vec3 mClearColor;
 
-	void init_sys();
-	void init_wnd();
-	void init_egl();
-	void init_gpu();
-
-	void reset_wnd();
-	void reset_egl();
+	bool init_gpu();
 	void reset_gpu();
 
-	void init(const GLDrawCfg& cfg);
+	bool init(const GLDrawCfg& cfg);
 	void reset();
-
-	bool valid_display() const { return mEGL.display != EGL_NO_DISPLAY; }
-	bool valid_surface() const { return mEGL.surface != EGL_NO_SURFACE; }
-	bool valid_context() const { return mEGL.context != EGL_NO_CONTEXT; }
-	bool valid_egl() const { return valid_display() && valid_surface() && valid_context(); }
 
 	void frame_clear() const {
 		glColorMask(true, true, true, true);
@@ -229,30 +198,34 @@ static int get_pol_tris(uint32_t vlst[6], const TDGeometry& geo, int polIdx) {
 
 namespace GLDraw {
 
-	void init(const GLDrawCfg& cfg) {
-		if (s_initFlg) return;
+	bool init(const GLDrawCfg& cfg) {
+		if (s_initFlg) { return true ; }
 		::memset(&s_app, 0, sizeof(GLESApp));
-		s_app.init(cfg);
-		s_initFlg = true;
+		s_initFlg = s_app.init(cfg);
+		return s_initFlg;
 	}
 
 	void reset() {
-		if (!s_initFlg) return;
+		if (!s_initFlg) { return; }
 		s_app.reset();
 		::memset(&s_app, 0, sizeof(GLESApp	));
 		s_initFlg = false;
 	}
 
-	void loop(void(*pLoop)());
+	void loop(void(*pLoop)()) {
+		GLSys::loop(pLoop);
+	}
 
 	void begin() {
-		if (!s_app.valid_egl()) { return; }
+		if (!s_initFlg) { return; }
+		//if (!GLSys::valid()) { return; }
 		s_app.frame_clear();
 	}
 
 	void end() {
-		if (!s_app.valid_egl()) { return; }
-		eglSwapBuffers(s_app.mEGL.display, s_app.mEGL.surface);
+		if (!s_initFlg) { return; }
+		//if (!GLSys::valid()) { return; }
+		GLSys::swap();
 	}
 
 	void set_view(const glm::vec3& pos, const glm::vec3& tgt, const glm::vec3& up) {
@@ -260,13 +233,13 @@ namespace GLDraw {
 		s_app.mView.update();
 	}
 
-	void set_degreesFOVY(float deg) {
-		s_app.mView.setFOVY(glm::radians(deg));
+	void set_FOVY_degrees(float deg) {
+		s_app.mView.set_FOVY(glm::radians(deg));
 		s_app.mView.update();
 	}
 
 	void set_view_range(float znear, float zfar) {
-		s_app.mView.setRange(znear, zfar);
+		s_app.mView.set_range(znear, zfar);
 		s_app.mView.update();
 	}
 
@@ -368,7 +341,7 @@ namespace GLDraw {
 	}
 
 	void Mesh::draw(const glm::mat4x4& worldMtx) {
-		if (!s_app.valid_egl()) { return; }
+		if (!GLSys::valid()) { return; }
 		if (0 == mBuffIdVtx) { return; }
 		if (0 == mBuffIdIdx) { return; }
 
@@ -435,361 +408,84 @@ namespace GLDraw {
 	}
 }
 
-void GLESApp::init(const GLDrawCfg& cfg) {
-	mView.mWidth = cfg.width;
-	mView.mHeight = cfg.height;
-	mView.mAspect = (float)mView.mWidth / mView.mHeight;
-	mView.setFOVY(glm::radians(40.0f));
-	mView.setRange(0.1f, 1000.0f);
+bool GLESApp::init(const GLDrawCfg& cfg) {
+	GLSysCfg oglCfg;
+	::memset(&oglCfg, 0, sizeof(oglCfg));
+	oglCfg.x = cfg.x;
+	oglCfg.y = cfg.y;
+	oglCfg.w = cfg.w;
+	oglCfg.h = cfg.h;
+	GLSys::init(oglCfg);
+
+	if (!GLSys::valid()) { return false; }
+
+	mAppPath = cfg.appPath;
+	if (!init_gpu()) {
+		sys_dbg_msg("GPU initialization failed\n");
+		return false;
+	}
+
+	mView.mWidth = cfg.w;
+	mView.mHeight = cfg.h;
+	//mView.mAspect = (float)mView.mWidth / mView.mHeight;
+	mView.set_FOVY(glm::radians(40.0f));
+	mView.set_range(0.1f, 1000.0f);
 
 	mClearColor = glm::vec3(0.33f, 0.44f, 0.55f);
 	mGamma = glm::vec3(2.2f);
-
-	init_sys();
-	init_wnd();
-	init_egl();
-	init_gpu();
+	return true;
 }
 
 void GLESApp::reset() {
+	GLSys::stop();
 	reset_gpu();
-	reset_egl();
-	reset_wnd();
+	GLSys::reset();
 }
 
-void GLESApp::init_egl() {
+bool GLESApp::init_gpu() {
 	using namespace std;
-	sys_dbg_msg("init_egl()");
-	if (mNativeDisplayHandle) {
-		mEGL.display = eglGetDisplay(mNativeDisplayHandle);
-	}
-	
-	if (!valid_display()) {
-		sys_dbg_msg("Failed to get and EGLDisplay");
-		return;
-	}
-
-	int verMaj = 0;
-	int verMin = 0;
-	bool flg = eglInitialize(mEGL.display, &verMaj, &verMin);
-	if (!flg) return;
-	sys_dbg_msg("EGL %d.%d\n", verMaj, verMin);
-	flg = eglBindAPI(EGL_OPENGL_ES_API);
-	if (flg != EGL_TRUE) {
-		sys_dbg_msg("eglBindAPI failed");
-		return;
-	}
-	bool hasCreateCtxExt = egl_has_extention(mEGL.display, "EGL_KHR_create_context");
-	EGLint ctxType = hasCreateCtxExt ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
-	static EGLint cfgAttrs[] = {
-		EGL_RED_SIZE, 8,
-		EGL_GREEN_SIZE, 8,
-		EGL_BLUE_SIZE, 8,
-		EGL_ALPHA_SIZE, 8,
-		EGL_DEPTH_SIZE, 24,
-		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-		EGL_RENDERABLE_TYPE, ctxType,
-		EGL_NONE
-	};
-	EGLint ncfg = 0;
-	flg = eglChooseConfig(mEGL.display, cfgAttrs, &mEGL.config, 1, &ncfg);
-	if (flg) flg = ncfg == 1;
-	if (!flg) {
-		sys_dbg_msg("eglChooseConfig failed");
-		return;
-	}
-
-	mEGL.surface = eglCreateWindowSurface(mEGL.display, mEGL.config, (EGLNativeWindowType)mNativeWindow, nullptr);
-	if (!valid_surface()) {
-		sys_dbg_msg("eglCreateWindowSurface failed");
-		return;
-	}
-
-	static EGLint ctxAttrs[] = {
-		EGL_CONTEXT_CLIENT_VERSION, hasCreateCtxExt ? 3 : 2,
-		EGL_NONE
-	};
-
-	mEGL.context = eglCreateContext(mEGL.display, mEGL.config, nullptr, ctxAttrs);
-	if (!valid_context()) {
-		sys_dbg_msg("eglCreateContext failed");
-		return;
-	}
-
-	if (!eglMakeCurrent(mEGL.display, mEGL.surface, mEGL.surface, mEGL.context)) {
-		sys_dbg_msg("eglMakeCurrent failed");
-	}
-
-	sys_dbg_msg("finished");
-}
-
-void GLESApp::reset_egl() {
-	if (valid_display()) {
-		eglMakeCurrent(mEGL.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-		eglTerminate(mEGL.display);
-	}
-
-	mEGL.reset();
-}
-
-void GLESApp::init_gpu() {
 	GLint status;
 	GLint infoLen = 0;
 
-	if (!valid_egl()) { return; }
+	if (!GLSys::valid()) { return false; }
 
-	std::string vtxSrc = load_text("vtx.vert");
-	if (vtxSrc.length() < 1) { return; }
-	const char* pVtxSrc = vtxSrc.c_str();
-	mGPU.shaderIdVtx = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(mGPU.shaderIdVtx, 1, &pVtxSrc, nullptr);
-	glCompileShader(mGPU.shaderIdVtx);
-	glGetShaderiv(mGPU.shaderIdVtx, GL_COMPILE_STATUS, &status);
-	pVtxSrc = nullptr;
+	string appPath = string(mAppPath);
+	string wkFolder = appPath.substr(0, appPath.rfind(PATH_SEPARATOR));
 
-	if (!status) {
-		sys_dbg_msg("GPU: vertex shader compilation failed.\n");
-		glGetShaderiv(mGPU.shaderIdVtx, GL_INFO_LOG_LENGTH, &infoLen);
-		char* pInfo = new char[infoLen];
-		if (pInfo) {
-			glGetShaderInfoLog(mGPU.shaderIdVtx, infoLen, &infoLen, pInfo);
-			sys_dbg_msg(pInfo);
-			delete[] pInfo;
-		}
-		return;
+	string vtxPath = wkFolder + PATH_SEPARATOR + "vtx.vert";
+	std::string srcVtx = load_text(vtxPath);
+
+	if (srcVtx.length() < 1) { return false; }
+	std::string fragPath = wkFolder + PATH_SEPARATOR + "hemidir.frag";
+	std::string srcFrag = load_text(fragPath);
+	if (srcFrag.length() < 1) { return false; }
+
+	mGPU.programId = GLSys::compile_prog_strs(srcVtx, srcFrag, &mGPU.shaderIdVtx, &mGPU.shaderIdFrag);
+
+	if (mGPU.programId) {
+		mGPU.attrLocPos = glGetAttribLocation(mGPU.programId, "vtxPos");
+		mGPU.attrLocNrm = glGetAttribLocation(mGPU.programId, "vtxNrm");
+		mGPU.attrLocClr = glGetAttribLocation(mGPU.programId, "vtxClr");
+		mGPU.prmLocWMtx = glGetUniformLocation(mGPU.programId, "prmWMtx");
+		mGPU.prmLocViewProj = glGetUniformLocation(mGPU.programId, "prmViewProj");
+		mGPU.prmLocViewPos = glGetUniformLocation(mGPU.programId, "prmViewPos");
+		mGPU.prmLocHemiSky = glGetUniformLocation(mGPU.programId, "prmHemiSky");
+		mGPU.prmLocHemiGround = glGetUniformLocation(mGPU.programId, "prmHemiGround");
+		mGPU.prmLocHemiUp = glGetUniformLocation(mGPU.programId, "prmHemiUp");
+		mGPU.prmSpecDir = glGetUniformLocation(mGPU.programId, "prmSpecDir");
+		mGPU.prmSpecClr = glGetUniformLocation(mGPU.programId, "prmSpecClr");
+		mGPU.prmSpecRough = glGetUniformLocation(mGPU.programId, "prmSpecRough");
+		mGPU.prmLocInvGamma = glGetUniformLocation(mGPU.programId, "prmInvGamma");
 	}
-
-	std::string pixSrc = load_text("hemidir.frag");
-	if (pixSrc.length() < 1) return;
-	const char* pPixSrc = pixSrc.c_str();
-	mGPU.shaderIdPix = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(mGPU.shaderIdPix, 1, &pPixSrc, nullptr);
-	glCompileShader(mGPU.shaderIdPix);
-	glGetShaderiv(mGPU.shaderIdPix, GL_COMPILE_STATUS, &status);
-	pPixSrc = nullptr;
-
-	if (!status) {
-		sys_dbg_msg("GPU: pixel shader compilation failed.\n");
-		glGetShaderiv(mGPU.shaderIdPix, GL_INFO_LOG_LENGTH, &infoLen);
-		char* pInfo = new char[infoLen];
-		if (pInfo) {
-			glGetShaderInfoLog(mGPU.shaderIdPix, infoLen, &infoLen, pInfo);
-			sys_dbg_msg(pInfo);
-			delete[] pInfo;
-		}
-		return;
-	}
-
-	sys_dbg_msg("GPU: shaders ok.\n");
-	mGPU.programId = glCreateProgram();
-	glAttachShader(mGPU.programId, mGPU.shaderIdVtx);
-	glAttachShader(mGPU.programId, mGPU.shaderIdPix);
-	glLinkProgram(mGPU.programId);
-	glGetProgramiv(mGPU.programId, GL_LINK_STATUS, &status);
-	if (!status) {
-		sys_dbg_msg("GPU: program link failed.\n");
-		glGetProgramiv(mGPU.programId, GL_INFO_LOG_LENGTH, &infoLen);
-		char* pInfo = new char[infoLen];
-		if (pInfo) {
-			glGetProgramInfoLog(mGPU.programId, infoLen, &infoLen, pInfo);
-			sys_dbg_msg(pInfo);
-			delete[] pInfo;
-		}
-		return;
-	}
-	sys_dbg_msg("GPU: program ok.\n");
-
-	mGPU.attrLocPos = glGetAttribLocation(mGPU.programId, "vtxPos");
-	mGPU.attrLocNrm = glGetAttribLocation(mGPU.programId, "vtxNrm");
-	mGPU.attrLocClr = glGetAttribLocation(mGPU.programId, "vtxClr");
-	mGPU.prmLocWMtx = glGetUniformLocation(mGPU.programId, "prmWMtx");
-	mGPU.prmLocViewProj = glGetUniformLocation(mGPU.programId, "prmViewProj");
-	mGPU.prmLocViewPos = glGetUniformLocation(mGPU.programId, "prmViewPos");
-	mGPU.prmLocHemiSky = glGetUniformLocation(mGPU.programId, "prmHemiSky");
-	mGPU.prmLocHemiGround = glGetUniformLocation(mGPU.programId, "prmHemiGround");
-	mGPU.prmLocHemiUp = glGetUniformLocation(mGPU.programId, "prmHemiUp");
-	mGPU.prmSpecDir = glGetUniformLocation(mGPU.programId, "prmSpecDir");
-	mGPU.prmSpecClr = glGetUniformLocation(mGPU.programId, "prmSpecClr");
-	mGPU.prmSpecRough = glGetUniformLocation(mGPU.programId, "prmSpecRough");
-	mGPU.prmLocInvGamma = glGetUniformLocation(mGPU.programId, "prmInvGamma");
+	return mGPU.programId != 0;
 }
 
 void GLESApp::reset_gpu() {
-	glDeleteShader(mGPU.shaderIdPix);
+	glDeleteShader(mGPU.shaderIdFrag);
 	glDeleteShader(mGPU.shaderIdVtx);
 	glDeleteProgram(mGPU.programId);
 }
 
-#ifdef _WIN32
-static const TCHAR* s_drwClassName = _T("GLDrawWindow");
+//void GLESApp::reset_sys() {}
 
-static LRESULT CALLBACK drwWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	LRESULT res = 0;
-	switch (msg) {
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	default:
-		res = DefWindowProc(hWnd, msg, wParam, lParam);
-		break;
-	}
-	return res;
-}
 
-void GLESApp::init_sys() {
-	if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)drwWndProc, &mhInstance)) {
-		sys_dbg_msg("Can't obtain instance handle");
-	}
-}
-
-void GLESApp::init_wnd() {
-	WNDCLASSEX wc;
-	ZeroMemory(&wc, sizeof(WNDCLASSEX));
-	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = CS_VREDRAW | CS_HREDRAW;
-
-	wc.hInstance = mhInstance;
-	wc.hCursor = LoadCursor(0, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-	wc.lpszClassName = s_drwClassName;
-	wc.lpfnWndProc = drwWndProc;
-	wc.cbWndExtra = 0x10;
-	mClassAtom = RegisterClassEx(&wc);
-
-	RECT rect;
-	rect.left = 0;
-	rect.top = 0;
-	rect.right = mView.mWidth;
-	rect.bottom = mView.mHeight;
-	int style = WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_GROUP;
-	AdjustWindowRect(&rect, style, FALSE);
-	int wndW = rect.right - rect.left;
-	int wndH = rect.bottom - rect.top;
-	TCHAR title[128];
-	ZeroMemory(title, sizeof(title));
-	_stprintf_s(title, sizeof(title) / sizeof(title[0]), _T("%s: build %s"), s_applicationName, _T(__DATE__));
-	mNativeWindow = CreateWindowEx(0, s_drwClassName, title, style, 0, 0, wndW, wndH, NULL, NULL, mhInstance, NULL);
-	if (mNativeWindow) {
-		ShowWindow(mNativeWindow, SW_SHOW);
-		UpdateWindow(mNativeWindow);
-		mNativeDisplayHandle = GetDC(mNativeWindow);
-	}
-}
-
-void GLESApp::reset_wnd() {
-	if (mNativeDisplayHandle) {
-		ReleaseDC(mNativeWindow, mNativeDisplayHandle);
-	}
-	UnregisterClass(s_drwClassName, mhInstance);
-}
-
-void GLDraw::loop(void(*pLoop)()) {
-	MSG msg;
-	bool done = false;
-	while (!done) {
-		if (PeekMessage(&msg, 0, 0, 0, PM_NOREMOVE)) {
-			if (GetMessage(&msg, NULL, 0, 0)) {
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			} else {
-				done = true;
-				break;
-			}
-		} else {
-			if (pLoop) {
-				pLoop();
-			}
-		}
-	}
-}
-#elif defined(X11)
-
-static int wait_for_MapNotify(Display* pDisp, XEvent* pEvt, char* pArg) 
-{
-	if ((pEvt->type == MapNotify) && (pEvt->xmap.window == (Window)pArg)) { 
-		return 1;
-	}
-	return 0;
-}
-
-void GLESApp::init_sys() {}
-
-void GLESApp::init_wnd() {
-	using namespace std;
-
-	sys_dbg_msg("GLESApp::init_wnd()");
-	mpNativeDisplay = XOpenDisplay(0);
-	if (mpNativeDisplay == 0) {
-		sys_dbg_msg("ERROR: can't open X display");
-		return;
-	}
-	
-	int defaultScreen = XDefaultScreen(mpNativeDisplay);
-	int defaultDepth = DefaultDepth(mpNativeDisplay, defaultScreen);
-
-	XVisualInfo* pVisualInfo = new XVisualInfo();
-	XMatchVisualInfo(mpNativeDisplay, defaultScreen, defaultDepth, TrueColor, pVisualInfo);
-
-	if (pVisualInfo == nullptr) {
-		sys_dbg_msg("ERROR: can't aquire visual info");
-		return;
-	}
-
-	Window rootWindow = RootWindow(mpNativeDisplay, defaultScreen);
-	Colormap colorMap = XCreateColormap(mpNativeDisplay, rootWindow, pVisualInfo->visual, AllocNone);
-
-	XSetWindowAttributes windowAttributes;
-	windowAttributes.colormap = colorMap;
-	windowAttributes.event_mask = StructureNotifyMask | ExposureMask | ButtonPressMask | KeyPressMask;
-	
-	mNativeWindow = XCreateWindow(mpNativeDisplay,
-	                              rootWindow,
-	                              0,
-	                              0,
-	                              mView.mWidth,
-	                              mView.mHeight,
-	                              0,
-	                              pVisualInfo->depth,
-	                              InputOutput,
-	                              pVisualInfo->visual,
-	                              CWEventMask | CWColormap,
-	                              &windowAttributes);
-
-	XMapWindow(mpNativeDisplay, mNativeWindow);
-	XStoreName(mpNativeDisplay, mNativeWindow, s_applicationName);
-
-	Atom windowManagerDelete = XInternAtom(mpNativeDisplay, "WM_DELETE_WINDOW", True);
-	XSetWMProtocols(mpNativeDisplay, mNativeWindow, &windowManagerDelete , 1);
-
-	mNativeDisplayHandle = (EGLNativeDisplayType)mpNativeDisplay;
-
-	XEvent event;
-	XIfEvent(mpNativeDisplay, &event, wait_for_MapNotify, (char*)mNativeWindow);
-	sys_dbg_msg("finished");
-}
-
-void GLESApp::reset_wnd() {
-	XDestroyWindow(mpNativeDisplay, mNativeWindow);
-	XCloseDisplay(mpNativeDisplay);
-}
-
-void GLDraw::loop(void(*pLoop)()) {
-	XEvent event;
-	bool done = false;
-	while (!done) {
-		KeySym key;
-		while (XPending(s_app.mpNativeDisplay)) {
-			XNextEvent(s_app.mpNativeDisplay, &event);
-			switch (event.type) {
-				case KeyPress:
-					done = true;
-			}
-		}
-
-		if (pLoop) {
-			pLoop();
-		}
-
-	}
-}
-#endif
