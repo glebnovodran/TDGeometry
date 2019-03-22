@@ -188,9 +188,10 @@ namespace GLSys {
 		GLuint sidFrag = 0;
 		union {
 			struct {
-				uint32_t vtx  : 1;
-				uint32_t frag : 1;
-				uint32_t prog : 1;
+				uint32_t vtx  :   1;
+				uint32_t frag :   1;
+				uint32_t prog :   1;
+				uint32_t linked : 1;
 			};
 			uint32_t all;
 		} init = { 0 };
@@ -211,7 +212,7 @@ namespace GLSys {
 						GLint status = 0;
 						glGetProgramiv(pid, GL_LINK_STATUS, &status);
 						if (!status) {
-							init.prog = 0;
+							init.linked = 1;
 							GLint infoLen = 0;
 							glGetProgramiv(pid, GL_INFO_LOG_LENGTH, &infoLen);
 							if (infoLen > 0) {
@@ -227,7 +228,7 @@ namespace GLSys {
 				}
 			}
 
-			if (init.all != 0x7) { // if incomplete
+			if (init.all != 0xF) { // if incomplete
 				if (init.vtx) {
 					glDeleteShader(sidVtx);
 					sidVtx = 0;
