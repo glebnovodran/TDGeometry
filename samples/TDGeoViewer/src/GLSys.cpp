@@ -118,6 +118,7 @@ namespace GLSys {
 	bool s_initFlg = false;
 	void init(const GLSysCfg& cfg) {
 		if (s_initFlg) return;
+		memset(&s_global, 0, sizeof(s_global));
 		s_global.mWndOrgX = cfg.x;
 		s_global.mWndOrgY = cfg.y;
 		s_global.mWidth = cfg.w;
@@ -314,7 +315,7 @@ void GLSysGlobal::init_egl() {
 	if (!eglMakeCurrent(mEGL.display, mEGL.surface, mEGL.surface, mEGL.context)) {
 		sys_dbg_msg("eglMakeCurrent failed");
 	}
-
+	eglSwapInterval(mEGL.display, 1);
 	sys_dbg_msg("finished");
 }
 
@@ -385,6 +386,7 @@ void GLSysGlobal::init_wnd() {
 void GLSysGlobal::reset_wnd() {
 	if (mNativeDisplayHandle) {
 		ReleaseDC(mNativeWindow, mNativeDisplayHandle);
+		mNativeDisplayHandle = NULL;
 	}
 	UnregisterClass(s_drwClassName, mhInstance);
 }
