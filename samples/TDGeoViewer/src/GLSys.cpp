@@ -436,16 +436,16 @@ void GLSysGlobal::init_wnd() {
 	int defaultScreen = XDefaultScreen(mpNativeDisplay);
 	int defaultDepth = DefaultDepth(mpNativeDisplay, defaultScreen);
 
-	XVisualInfo* pVisualInfo = new XVisualInfo();
-	XMatchVisualInfo(mpNativeDisplay, defaultScreen, defaultDepth, TrueColor, pVisualInfo);
+	XVisualInfo visualInfo;
+	Status status = XMatchVisualInfo(mpNativeDisplay, defaultScreen, defaultDepth, TrueColor, &visualInfo);
 
-	if (pVisualInfo == nullptr) {
+	if (status == 0) {
 		sys_dbg_msg("ERROR: can't aquire visual info");
 		return;
 	}
 
 	Window rootWindow = RootWindow(mpNativeDisplay, defaultScreen);
-	Colormap colorMap = XCreateColormap(mpNativeDisplay, rootWindow, pVisualInfo->visual, AllocNone);
+	Colormap colorMap = XCreateColormap(mpNativeDisplay, rootWindow, visualInfo.visual, AllocNone);
 
 	XSetWindowAttributes windowAttributes;
 	windowAttributes.colormap = colorMap;
@@ -459,9 +459,9 @@ void GLSysGlobal::init_wnd() {
 								mWndW,
 								mWndH,
 								0,
-								pVisualInfo->depth,
+								visualInfo.depth,
 								InputOutput,
-								pVisualInfo->visual,
+								visualInfo.visual,
 								CWEventMask | CWColormap,
 								&windowAttributes);
 
