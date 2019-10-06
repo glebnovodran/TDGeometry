@@ -154,11 +154,13 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\TDGeometry.cpp" />
     <ClCompile Include="src\GLDraw.cpp" />
+    <ClCompile Include="src\GLSys.cpp" />
     <ClCompile Include="src\TDGeoViewer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\TDGeometry.hpp" />
     <ClInclude Include="src\GLDraw.hpp" />
+    <ClInclude Include="src\GLSys.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\shader\hemi.frag" />
